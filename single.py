@@ -1,12 +1,11 @@
-import yfinance as yf
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 from keras import Sequential
-from keras.layers import LSTM, Dense, Dropout
-from keras.callbacks import EarlyStopping
-from keras.regularizers import l2
+from keras.layers import LSTM, Dense, Dropout #type: ignore
+from keras.callbacks import EarlyStopping #type: ignore
+from keras.regularizers import l2 #type: ignore
 from datetime import datetime, timedelta
 import requests
 import pandas as pd
@@ -61,19 +60,28 @@ def adjusted_exponential_weighted_average(scores, alpha=0.5):
 def evaluate_predictions(historical_prices, future_prices, predicted_averages, labels):
     evaluation_results = []
     profits = {label: 0 for label in labels}
-    
+
+    # Ideal scenario profit calculation
+    ideal_profit = 0
+    for i in range(1, len(future_prices)):
+        if future_prices[i] > future_prices[i - 1]:  # Buy if price is increasing
+            ideal_profit += future_prices[i] - future_prices[i - 1]
+
+    # Buy-and-hold profit calculation
+    buy_and_hold_profit = future_prices[-1] - future_prices[0]  # Last price - first price
+
     for i, predictions in enumerate(predicted_averages):
         label = labels[i]
-        
+
         # Align lengths
         min_length = min(len(future_prices), len(predictions))
         aligned_future_prices = future_prices[:min_length]
         aligned_predictions = predictions[:min_length]
-        
+
         # Calculate RMSE
         rmse = np.sqrt(mean_squared_error(aligned_future_prices, aligned_predictions))
         print(f"RMSE for {label}: {rmse}")
-        
+
         # Calculate profits/losses
         current_price = historical_prices[-1]  # Last known price
         balance = 0  # Total profit/loss
@@ -83,12 +91,16 @@ def evaluate_predictions(historical_prices, future_prices, predicted_averages, l
             elif predicted_price < current_price:  # Sell
                 balance += current_price - actual_price
             current_price = actual_price  # Update current price for next prediction
-        
+
         profits[label] = balance
         evaluation_results.append((label, rmse, balance))
         print(f"Profit/Loss for {label}: ${balance:.2f}")
-    
-    return evaluation_results
+
+    print(f"Ideal scenario profit: ${ideal_profit:.2f}")
+    print(f"Buy-and-hold profit: ${buy_and_hold_profit:.2f}")
+
+    return evaluation_results, ideal_profit, buy_and_hold_profit
+
 
 api_token = 'lFVm52EqS8EuypuH9FqhzhMAbo7zbeNb'
 market_days = get_market_days(2015, 2025)
@@ -203,38 +215,44 @@ for prediction in prediction_arrays:
 future_data = data(stock, last_date, future_date)
 actual_future_prices = future_data['close'].values if not future_data.empty else np.array([])
 
-# Evaluate only if future actual prices are available
-if actual_future_prices.size > 0:  # Check if the array is not empty
-    evaluation_results = evaluate_predictions(
-        stock_data['close'].values,  # Historical prices for reference
-        actual_future_prices,        # Actual future prices
-        averages_array,              # Predicted averages
-        labels                       # Labels for the averages
+# Evaluate and visualize
+if actual_future_prices.size > 0:
+    evaluation_results, ideal_profit, buy_and_hold_profit = evaluate_predictions(
+        stock_data['close'].values,
+        actual_future_prices,
+        averages_array,
+        labels
     )
-else:
-    print("Future actual prices are not available. Skipping evaluation.")
 
-# Visualization of RMSE and Profits
-if actual_future_prices.size > 0:  # Check if the array is not empty again
-    # Extract labels, RMSE values, and profits for plotting
+    # Determine the best model
+    best_model_index = np.argmin([result[1] for result in evaluation_results])
+    best_model_label = evaluation_results[best_model_index][0]
+    best_model_predictions = averages_array[best_model_index]
+
+    # Plot only the best prediction
+    plt.figure(figsize=(12, 6))
+    plt.plot(actual_future_prices, label='Actual Prices', color='blue')
+    plt.plot(best_model_predictions[:len(actual_future_prices)], label=f'Best Model: {best_model_label}', color='orange')
+    plt.title(f'Best Model Prediction vs Actual Prices')
+    plt.xlabel('Time')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.show()
+
+    # Plot profits
     model_labels = [result[0] for result in evaluation_results]
-    rmse_values = [result[1] for result in evaluation_results]
     profits_values = [result[2] for result in evaluation_results]
 
-    # Plot RMSE
-    plt.figure(figsize=(10, 5))
-    plt.bar(model_labels, rmse_values)
-    plt.title('RMSE of Prediction Models')
-    plt.xlabel('Prediction Models')
-    plt.ylabel('RMSE')
-    plt.show()
+    # Add ideal and buy-and-hold
+    model_labels.extend(['Ideal Scenario', 'Buy-and-Hold'])
+    profits_values.extend([ideal_profit, buy_and_hold_profit])
 
-    # Plot Profits/Losses
-    plt.figure(figsize=(10, 5))
-    plt.bar(model_labels, profits_values, color='green' if profits_values[0] > 0 else 'red')
-    plt.title('Profit/Loss from Prediction Models')
-    plt.xlabel('Prediction Models')
+    plt.figure(figsize=(12, 6))
+    plt.bar(model_labels, profits_values, color=['green' if p > 0 else 'red' for p in profits_values])
+    plt.title('Profit/Loss Comparison')
+    plt.xlabel('Models')
     plt.ylabel('Profit/Loss ($)')
+    plt.xticks(rotation=45)
     plt.show()
 else:
-    print("Skipping RMSE and profits visualization as future actual prices are not available.")
+    print("Skipping evaluation and visualization as future actual prices are not available.")
