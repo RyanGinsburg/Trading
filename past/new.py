@@ -6,9 +6,11 @@ from keras import Sequential
 from keras.layers import LSTM, Dense, Dropout #type: ignore
 from keras.callbacks import EarlyStopping #type: ignore
 from keras.regularizers import l2 #type: ignore
+from keras.optimizers import Adam
 from datetime import datetime, timedelta
 import requests
 import pandas as pd
+import optuna
 
 def create_dataset(data, time_step):
     X, y = [], []
@@ -17,7 +19,54 @@ def create_dataset(data, time_step):
         y.append(data[i + time_step, 0])
     return np.array(X), np.array(y)
 
-def data(stock, start_date='2019-10-14 00:00:00', end_date=datetime.now(), technical_indicators=['rsi']):
+def optimize_model(data, train_split=0.7):
+    def objective(trial):
+        # Suggest values for hyperparameters
+        time_step = trial.suggest_int('time_step', 1, 30)  # Range for time_step
+        units = trial.suggest_int('units', 30, 100)
+        dropout_rate = trial.suggest_float('dropout_rate', 0.1, 0.5)
+        learning_rate = trial.suggest_loguniform('learning_rate', 1e-4, 1e-2)
+
+        # Create dataset with the suggested time_step
+        X, y = create_dataset(data, time_step)
+
+        # Split data into train and validation
+        train_size = int(len(X) * train_split)
+        X_train, X_val = X[:train_size], X[train_size:]
+        y_train, y_val = y[:train_size], y[train_size:]
+
+        # Reshape for LSTM
+        X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
+        X_val = X_val.reshape(X_val.shape[0], X_val.shape[1], 1)
+
+        # Build and train the model
+        model = build_lstm(X_train.shape[1:], units, dropout_rate, learning_rate)
+        early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+        model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=50, batch_size=32, verbose=0, callbacks=[early_stop])
+
+        # Evaluate the model on the validation set
+        val_loss = model.evaluate(X_val, y_val, verbose=0)
+        return val_loss
+
+    # Run the optimization
+    study = optuna.create_study(direction='minimize')
+    study.optimize(objective, n_trials=30)
+
+    # Return the best parameters
+    return study.best_params
+
+def build_lstm(input_shape, units=50, dropout_rate=0.2, learning_rate=0.001):
+    model = Sequential([
+        LSTM(units, return_sequences=True, input_shape=input_shape),
+        Dropout(dropout_rate),
+        LSTM(units),
+        Dropout(dropout_rate),
+        Dense(1)
+    ])
+    model.compile(optimizer=Adam(learning_rate=learning_rate), loss='mean_squared_error')
+    return model
+
+def data(stock, start_date='2019-10-14 00:00:00', end_date=datetime.now(), technical_indicators=['ema', 'sma', 'rsi', 'adx']):
     df_list = []
     for i, indicator in enumerate(technical_indicators):
         url = f'https://financialmodelingprep.com/api/v3/technical_indicator/1day/{stock}?type={indicator}&period=1300&apikey={api_token}'
@@ -41,10 +90,8 @@ def data(stock, start_date='2019-10-14 00:00:00', end_date=datetime.now(), techn
 api_token = 'lFVm52EqS8EuypuH9FqhzhMAbo7zbeNb'
 
 # Parameters
-stock = 'msft'
-time_step = 15
+stock = 'aapl'
 future_days = 20
-simualted_days = 30
 
 # Download stock data
 end_date = datetime.now() - timedelta(days=270)
@@ -56,32 +103,34 @@ stock_data = data(stock, start_date, end_date, technical_indicators=['ema', 'sma
 scaler = MinMaxScaler(feature_range=(0, 1))
 scaled_data = scaler.fit_transform(stock_data['close'].values.reshape(-1, 1))
 
-# Create dataset
+# Optimize time_step and other parameters
+best_params = optimize_model(scaled_data)
+print(f"Best Parameters: {best_params}")
+
+# Extract the best time_step
+time_step = best_params['time_step']
+print(f"Best time_step: {time_step}")
+
+# Create dataset using the best time_step
 X, y = create_dataset(scaled_data, time_step)
 
-# Split data into train and test
-train_size = int(len(X) * 0.8)
+# Split the data into train and test
+train_size = int(len(X) * 0.7)
 X_train, X_test = X[:train_size], X[train_size:]
 y_train, y_test = y[:train_size], y[train_size:]
 
-# Reshape input for LSTM
+# Reshape for LSTM
 X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
 X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], 1)
 
-# Build LSTM model with Dropout and Regularization
-model = Sequential()
-model.add(LSTM(units=30, return_sequences=True, input_shape=(time_step, 1), kernel_regularizer=l2(0.01)))
-model.add(Dropout(0.3))  # Dropout rate of 30%
-model.add(LSTM(units=30, return_sequences=False, kernel_regularizer=l2(0.01)))
-model.add(Dropout(0.3))  # Dropout rate of 30%
-model.add(Dense(units=15))
-model.add(Dense(units=1))
+# Train final model using the best parameters
+model = build_lstm(X_train.shape[1:], units=best_params['units'], dropout_rate=best_params['dropout_rate'], learning_rate=best_params['learning_rate'])
+early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=50, batch_size=32, callbacks=[early_stop])
 
-# Compile and train the model with Early Stopping
-model.compile(optimizer='adam', loss='mean_squared_error')
-early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
-history = model.fit(X_train, y_train, validation_data=(X_test, y_test), 
-                    epochs=50, batch_size=32, verbose=1, callbacks=[early_stop])
+# Evaluate final model
+test_loss = model.evaluate(X_test, y_test, verbose=0)
+print(f"Final Test Loss: {test_loss}")
 
 # Make predictions on test data
 test_predictions = model.predict(X_test)
@@ -187,7 +236,7 @@ labels = [
 ]
 
 for smoothed, label in zip(methods, labels):
-    print("First 5 future prices for Method 1:", smoothed[:10])
+    print("First 5 future prices for :", smoothed[:10])
     plt.plot(future_dates, smoothed, label=label, linestyle='--', alpha=0.7)
 
 plt.title(f'{stock} Stock Price Prediction - Comparison of Methods (Starting from Last Known Price)')
