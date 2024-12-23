@@ -11,43 +11,42 @@ import requests
 import pandas as pd
 import optuna
 import tensorflow as tf
+import pandas_market_calendars as mcal
 
 api_token = 'lFVm52EqS8EuypuH9FqhzhMAbo7zbeNb'
 
 # Utility Functions
-def create_dataset(data, time_step):
+def v3_create_dataset(data, time_step):
     X, y = [], []
     for i in range(len(data) - time_step - 1):
         X.append(data[i:(i + time_step), 0])
         y.append(data[i + time_step, 0])
     return np.array(X), np.array(y)
 
-def weighted_loss(decay_factor):
-    def loss_fn(y_true, y_pred):
-        # Weight earlier errors higher using an exponential decay
-        weights = tf.exp(-tf.range(0, tf.shape(y_true)[0], dtype=tf.float32) * decay_factor)
-        mse = tf.keras.losses.MeanSquaredError()
-        loss = mse(y_true, y_pred)
-        return tf.reduce_mean(loss * weights)
-    return loss_fn
+def v3_get_market_days(start_year, end_year, exchange='NYSE'):
+    market_calendar = mcal.get_calendar(exchange)
+    start_date = f"{start_year}-01-01"
+    end_date = f"{end_year}-12-31"
+    schedule = market_calendar.schedule(start_date=start_date, end_date=end_date)
+    market_days = schedule.index.to_list()
+    return market_days
 
-def augment_data(data, noise_level=0.02):
+def v3_augment_data(data, noise_level=0.02):
     noise = np.random.normal(0, noise_level, data.shape)
     return data + noise
 
-def build_lstm(input_shape, units=50, dropout_rate=0.3, learning_rate=0.001, decay_factor=0.2):
+def v3_build_lstm(input_shape, units=50, dropout_rate=0.3, learning_rate=0.001):
     model = Sequential([
-        LSTM(units, return_sequences=True, input_shape=input_shape, kernel_regularizer=l2(0.01)),
+        LSTM(units, return_sequences=True, input_shape=input_shape, kernel_regularizer=l2(0.01)),  # Added L2 regularization
         Dropout(dropout_rate),
-        LSTM(units, kernel_regularizer=l2(0.01)),
+        LSTM(units, kernel_regularizer=l2(0.01)),  # Added L2 regularization
         Dropout(dropout_rate),
         Dense(1)
     ])
-    model.compile(optimizer=Adam(learning_rate=learning_rate), loss=weighted_loss(decay_factor))
+    model.compile(optimizer=Adam(learning_rate=learning_rate), loss='mean_squared_error')
     return model
 
-
-def fetch_technical_data(stock, start_date, end_date, technical_indicators=['rsi']):
+def v3_fetch_technical_data(stock, start_date, end_date, technical_indicators=['rsi']):
     df_list = []
     for i, indicator in enumerate(technical_indicators):
         url = f'https://financialmodelingprep.com/api/v3/technical_indicator/1day/{stock}?type={indicator}&period=1300&apikey={api_token}'
@@ -65,17 +64,16 @@ def fetch_technical_data(stock, start_date, end_date, technical_indicators=['rsi
     combined_df = pd.concat(df_list, axis=1)
     return combined_df.loc[pd.to_datetime(start_date):pd.to_datetime(end_date)]
 
-def optimize_model(data, train_split=0.7):
-    def objective(trial):
+def v3_optimize_model(data, train_split=0.7):
+    def v3_objective(trial):
         time_step = trial.suggest_int('time_step', 1, 30)
         units = trial.suggest_int('units', 30, 100)
         dropout_rate = trial.suggest_float('dropout_rate', 0.1, 0.5)
         learning_rate = trial.suggest_loguniform('learning_rate', 1e-4, 1e-2)
         epochs = trial.suggest_int('epochs', 10, 30)
         batch_size = trial.suggest_int('batch_size', 16, 128)
-        decay_factor = trial.suggest_float('decay_factor', 0.01, 0.5)
 
-        X, y = create_dataset(data, time_step)
+        X, y = v3_create_dataset(data, time_step)
         train_size = int(len(X) * train_split)
         X_train, X_val = X[:train_size], X[train_size:]
         y_train, y_val = y[:train_size], y[train_size:]
@@ -83,7 +81,7 @@ def optimize_model(data, train_split=0.7):
         X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
         X_val = X_val.reshape(X_val.shape[0], X_val.shape[1], 1)
 
-        model = build_lstm(X_train.shape[1:], units, dropout_rate, learning_rate, decay_factor)
+        model = v3_build_lstm(X_train.shape[1:], units, dropout_rate, learning_rate)
         early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
 
         model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=epochs, batch_size=batch_size, verbose=0, callbacks=[early_stop])
@@ -92,44 +90,57 @@ def optimize_model(data, train_split=0.7):
         return val_loss
 
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=40)
+    study.optimize(v3_objective, n_trials=40)
     return study.best_params
 
-def future_predictions_method_1(model, X_test, scaler, future_days):
-    future_predictions = model.predict(X_test[-future_days:])
+def v3_future_predictions_method_1(model, X_test, scaler, future_days):
+    future_predictions = model.predict(X_test[-(future_days+1):])
     return scaler.inverse_transform(future_predictions)
 
-def future_predictions_method_2(model, last_sequence, future_days):
+def v3_future_predictions_method_2(model, last_sequence, future_days):
     predictions = []
     current_batch = last_sequence.reshape((1, last_sequence.shape[0], 1))
-    for _ in range(future_days):
+    for _ in range(future_days+1):
         pred = model.predict(current_batch, verbose=0)[0]
         predictions.append(pred)
         current_batch = np.append(current_batch[:, 1:, :], [[pred]], axis=1)
     return np.array(predictions)
 
-def plot_predictions(stock_data, future_dates, methods, labels, last_date, future_data, stock):
+def v3_plot_predictions(stock_data, future_dates, methods, labels, last_date, future_data, stock):
     plt.figure(figsize=(15, 7))
-    plt.plot(stock_data.index, stock_data['close'].values, label='Historical Data')
 
+    # Plot historical data
+    plt.plot(stock_data.index, stock_data['close'].values, label='Historical Data', color='blue')
+    plt.scatter(stock_data.index, stock_data['close'].values, color='blue', s=10, label='_nolegend_')
+
+    # Plot actual future data if available
     if not future_data.empty:
         plt.plot(future_data.index, future_data['close'].values, label='Actual Future Data', color='green')
+        plt.scatter(future_data.index, future_data['close'].values, color='green', s=10, label='_nolegend_')
 
+    # Plot predictions for each method
     for method, label in zip(methods, labels):
         plt.plot(future_dates, method, label=label, linestyle='--', alpha=0.7)
+        plt.scatter(future_dates, method, s=10, label='_nolegend_')
 
+    # Add a vertical line and annotation for prediction start
     plt.axvline(x=last_date, color='red', linestyle='--', alpha=0.5)
-    plt.text(last_date, plt.ylim()[0], 'Prediction Start', rotation=90, verticalalignment='bottom')
+    plt.text(last_date, plt.ylim()[0], 'Prediction Start', rotation=90, verticalalignment='bottom', color='red')
+
+    # Add titles and labels
     plt.title(f'{stock} Stock Price Prediction - Comparison of Methods')
     plt.xlabel('Date')
     plt.ylabel('Price ($)')
     plt.legend()
+
+    # Display the plot
     plt.show()
 
 # Main Workflow
-def main():
-    plot = True
-    stock = 'msft'
+def v3_main():
+    market_days = v3_get_market_days(2015, 2025)
+    plot = False
+    stock = 'aapl'
     future_days = 20
     end_date = datetime.now() - timedelta(days=95)
     future_date = datetime.now()
@@ -137,48 +148,61 @@ def main():
     technical_indicators = ['ema', 'sma', 'williams', 'rsi', 'adx']
 
     #start
-    stock_data = fetch_technical_data(stock, start_date, end_date, technical_indicators)
+    stock_data = v3_fetch_technical_data(stock, start_date, end_date, technical_indicators)
     
+    last_price = stock_data['close'].values[-1]
     last_date = stock_data.index[-1]
-    if not isinstance(last_date, pd.Timestamp):
-        last_date = pd.to_datetime(last_date)
-    future_dates = [last_date + timedelta(days=x + 1) for x in range(future_days)]
+    
+    date = last_date + timedelta(days=1)
+    future_dates = []
+    for i in range(future_days):
+        while date not in market_days:
+            date += timedelta(days=1)
+        future_dates.append(date)
+        date += timedelta(days=1)
     
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(stock_data['close'].values.reshape(-1, 1))
 
-    best_params = optimize_model(scaled_data)
+    best_params = v3_optimize_model(scaled_data)
     time_step = best_params['time_step']
 
-    X, y = create_dataset(scaled_data, time_step)
+    X, y = v3_create_dataset(scaled_data, time_step)
     train_size = int(len(X) * 0.7)
     X_train, X_test = X[:train_size], X[train_size:]
     y_train, y_test = y[:train_size], y[train_size:]
 
     X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], 1)
-    X_train = augment_data(X_train)  # Augment training data
+    X_train = v3_augment_data(X_train)  # Augment training data
     X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], 1)
 
-    model = build_lstm(X_train.shape[1:], units=best_params['units'], dropout_rate=best_params['dropout_rate'], learning_rate=best_params['learning_rate'])
+    model = v3_build_lstm(X_train.shape[1:], units=best_params['units'], dropout_rate=best_params['dropout_rate'], learning_rate=best_params['learning_rate'])
     early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
 
-    model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=best_params['epochs'], batch_size=best_params['batch_size'], callbacks=[early_stop], decay_factor=best_params['decay_factor'])
+    model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=best_params['epochs'], batch_size=best_params['batch_size'], callbacks=[early_stop])
 
-    # Method 1
-    future_prices_method_1 = future_predictions_method_1(model, X_test, scaler, future_days)
+         # Method 1
+    future_prices_method_1 = v3_future_predictions_method_1(model, X_test, scaler, future_days)
 
     # Method 2
     last_sequence = scaler.transform(stock_data['close'].values[-time_step:].reshape(-1, 1)).reshape(-1)
-    future_predictions = future_predictions_method_2(model, last_sequence, future_days)
+    future_predictions = v3_future_predictions_method_2(model, last_sequence, future_days)
     future_prices_method_2 = scaler.inverse_transform(future_predictions)
-
-    last_price = stock_data['close'].values[-1]
+    
     future_prices_method_2 -= future_prices_method_2[0] - last_price
     future_prices_method_1 -= future_prices_method_1[0] - last_price
-
+    extra_future_prices_method_1 = future_prices_method_1
+    extra_future_prices_method_2 = future_prices_method_2
+    future_prices_method_2 = future_prices_method_2[1:]
+    future_prices_method_1 = future_prices_method_1[1:]
+    
     if plot:
-        future_data = fetch_technical_data(stock, last_date, future_date)
+        future_prices_method_2 = extra_future_prices_method_2
+        future_prices_method_1 = extra_future_prices_method_1
+        future_dates.insert(0, last_date)
         
-        plot_predictions(stock_data, future_dates, [future_prices_method_1, future_prices_method_2], ['Method 1', 'Method 2'], stock_data.index[-1], future_data, stock)
+        future_data = v3_fetch_technical_data(stock, last_date, future_date)
+        
+        v3_plot_predictions(stock_data, future_dates, [future_prices_method_1, future_prices_method_2], ['Method 1', 'Method 2'], stock_data.index[-1], future_data, stock)
 if __name__ == "__main__":
-    main()
+    v3_main()
