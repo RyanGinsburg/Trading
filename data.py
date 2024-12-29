@@ -927,41 +927,6 @@ def insert_predictions(table_name, last_date, last_open, last_close, last_rsi, l
     ))
     conn.commit()
 
-def display_database(db_name):
-    # Connect to the database
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
-
-    # Get all table names
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = cursor.fetchall()
-
-    if not tables:
-        print("No tables found in the database.")
-        return
-
-    # Loop through tables and display their content
-    for table_name in tables:
-        table_name = table_name[0]
-        print(f"\nTable: {table_name}")
-        cursor.execute(f"SELECT * FROM {table_name};")
-        rows = cursor.fetchall()
-
-        # Fetch column names
-        cursor.execute(f"PRAGMA table_info({table_name});")
-        columns = [col[1] for col in cursor.fetchall()]
-        print(f"Columns: {columns}")
-
-        # Display rows
-        if rows:
-            for row in rows:
-                print(row)
-        else:
-            print("No data found in this table.")
-
-    # Close the connection
-    conn.close()
-
 def array_to_comma_separated_string(array: np.ndarray) -> str:
     """
     Converts a numpy.ndarray into a comma-separated string.
@@ -992,7 +957,6 @@ future_days = 30
 future_date = datetime.now()
 start_date = future_date - timedelta(days=3000)
 full_dates = dates()
-
 stocks = [
     'AAPL', 'MSFT', 'AMZN', 'NVDA', 'GOOGL', 'GOOG', 'META', 'BRK.B', 'TSLA', 'UNH',
     'LLY', 'JPM', 'XOM', 'JNJ', 'V', 'PG', 'AVGO', 'MA', 'HD', 'CVX',
@@ -1015,8 +979,8 @@ for stock in stocks:
                 RESET = True
             else:
                 RESET = False
-            last_row = full_data.iloc[-1]
-            last_date = last_row.index
+            last_row = stock_data.iloc[-1]
+            last_date = last_row.name.date()
             last_close = last_row['close']
             last_open = last_row['open']
             last_rsi = last_row['rsi']
@@ -1038,5 +1002,3 @@ for stock in stocks:
                 last_rsi, last_williams, last_adx, predictions
             )
 conn.close()
-database_name = "trading_algo.db"
-display_database(database_name)
