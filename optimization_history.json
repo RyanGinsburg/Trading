@@ -1,0 +1,49 @@
+{
+    "aapl_v1": {
+        "time_step": 12,
+        "units": 46,
+        "dropout_rate": 0.35783650485232027,
+        "learning_rate": 0.00110991559885936
+    },
+    "aapl_v2": {
+        "time_step": 20,
+        "units": 68,
+        "dropout_rate": 0.2960255776342137,
+        "learning_rate": 0.00013350387445550834
+    },
+    "aapl_v3": {
+        "time_step": 7,
+        "units": 74,
+        "dropout_rate": 0.24331290194340466,
+        "learning_rate": 0.0007709226757480253,
+        "epochs": 29,
+        "batch_size": 60
+    },
+    "aapl_v4": {
+        "time_step": 14,
+        "units": 64,
+        "dropout_rate": 0.13512698836533862,
+        "learning_rate": 0.0003507302685517404,
+        "epochs": 27,
+        "batch_size": 20
+    },
+    "aapl_v5": {
+        "time_step": 15,
+        "units": 90,
+        "dropout_rate": 0.4348865335244075,
+        "learning_rate": 0.00025126741608059045,
+        "epochs": 26,
+        "batch_size": 69,
+        "decay_factor": 0.4017784893072487
+    },
+    "aapl_v6": {
+        "time_step": 6,
+        "units": 57,
+        "dropout_rate": 0.29946779701813586,
+        "learning_rate": 0.002815904405919872,
+        "epochs": 21,
+        "batch_size": 61,
+        "decay_factor": 0.37326060633369496,
+        "future_days": 33
+    }
+}
