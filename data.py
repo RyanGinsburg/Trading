@@ -119,12 +119,15 @@ def versions(i, RESET=False):
 
         def v1_optimize_model(data, train_split=0.7):
             previous_params = opt_history.get_parameters(stock, 1)
-            num_trials = 30
-            if not previous_params:
-                if RESET:
-                    num_trials = 30
-                else: 
-                    num_trials = 10
+            if testing:
+                num_trials = 1
+            else:
+                num_trials = 30
+                if not previous_params:
+                    if RESET:
+                        num_trials = 30
+                    else: 
+                        num_trials = 10
             suggest = create_optimization_trial(previous_params)
             
             def v1_objective(trial):
@@ -233,12 +236,15 @@ def versions(i, RESET=False):
         def v2_optimize_model(data, train_split=0.7):
             previous_params = opt_history.get_parameters(stock, 2)
             suggest = create_optimization_trial(previous_params)
-            num_trials = 40
-            if not previous_params:
-                if RESET:
-                    num_trials = 40
-                else:
-                    num_trials = 15
+            if testing:
+                num_trials = 1
+            else:
+                num_trials = 40
+                if not previous_params:
+                    if RESET:
+                        num_trials = 40
+                    else:
+                        num_trials = 15
             
             def v2_objective(trial):
                 params = {
@@ -348,12 +354,15 @@ def versions(i, RESET=False):
         def v3_optimize_model(data, train_split=0.7):
             previous_params = opt_history.get_parameters(stock, 3)
             suggest = create_optimization_trial(previous_params)
-            num_trials = 40
-            if not previous_params:
-                if RESET:
-                    num_trials = 40
-                else:
-                    num_trials = 15
+            if testing:
+                num_trials = 1
+            else:
+                num_trials = 40
+                if not previous_params:
+                    if RESET:
+                        num_trials = 40
+                    else:
+                        num_trials = 15
             
             def v3_objective(trial):
                 params = {
@@ -472,11 +481,14 @@ def versions(i, RESET=False):
         def v4_optimize_model(data, train_split=0.7):
             previous_params = opt_history.get_parameters(stock, 4)
             suggest = create_optimization_trial(previous_params)
-            num_trials = 40
-            if not previous_params:
-                if RESET:
-                    num_trials = 40
-                else: num_trials = 15
+            if testing:
+                num_trials = 1
+            else:
+                num_trials = 40
+                if not previous_params:
+                    if RESET:
+                        num_trials = 40
+                    else: num_trials = 15
             
             def v4_objective(trial):
                 params = {
@@ -596,11 +608,14 @@ def versions(i, RESET=False):
         def v5_optimize_model(data, train_split=0.7):
             previous_params = opt_history.get_parameters(stock, 5)
             suggest = create_optimization_trial(previous_params)
-            num_trials = 50
-            if not previous_params:
-                if RESET:
-                    num_trials = 50
-                else: num_trials = 20
+            if testing:
+                num_trials = 1
+            else:
+                num_trials = 50
+                if not previous_params:
+                    if RESET:
+                        num_trials = 50
+                    else: num_trials = 20
             
             
             def v5_objective(trial):
@@ -723,11 +738,14 @@ def versions(i, RESET=False):
         def v6_optimize_model(data, train_split=0.7):
             previous_params = opt_history.get_parameters(stock, 6)
             suggest = create_optimization_trial(previous_params)
-            num_trials = 50
-            if not previous_params:
-                if RESET:
-                    num_trials = 50
-                else: num_trials = 20
+            if testing:
+                num_trials = 1
+            else:
+                num_trials = 50
+                if not previous_params:
+                    if RESET:
+                        num_trials = 50
+                    else: num_trials = 20
             
             
             def v6_objective(trial):
@@ -863,70 +881,6 @@ def dates():
         result_dates.append(future_dates)
     return(result_dates)
 
-def create_table_if_not_exists(stock, start_date):
-    """
-    Create a table for the stock with a specific start date if it doesn't exist.
-    """
-    # Format the start date
-    start_date_str = start_date.strftime("%Y_%m_%d")
-    table_name = f"{stock}_{start_date_str}"
-
-    create_table_query = f"""
-    CREATE TABLE IF NOT EXISTS {table_name} (
-        last_date TEXT PRIMARY KEY,
-        last_open REAL,
-        last_close REAL,
-        last_rsi REAL,
-        last_williams REAL,
-        last_adx REAL,
-        pred_1_1 TEXT,
-        pred_1_2 TEXT,
-        pred_2_1 TEXT,
-        pred_2_2 TEXT,
-        pred_3_1 TEXT,
-        pred_3_2 TEXT,
-        pred_4_1 TEXT,
-        pred_4_2 TEXT,
-        pred_5_1 TEXT,
-        pred_5_2 TEXT,
-        pred_6_1 TEXT,
-        pred_6_2 TEXT
-    )
-    """
-    cursor.execute(create_table_query)
-    conn.commit()
-    return table_name
-
-def insert_predictions(table_name, last_date, last_open, last_close, last_rsi, last_williams, last_adx, predictions):
-    """
-    Insert prediction data into the specified table.
-    """
-    # Ensure last_date is a string (e.g., from a Timestamp or Index)
-    last_date = str(last_date)
-
-    # Ensure numeric inputs are of float type
-    last_open = float(last_open)
-    last_close = float(last_close)
-    last_rsi = float(last_rsi)
-    last_williams = float(last_williams)
-    last_adx = float(last_adx)
-
-    # SQL query
-    insert_query = f"""
-    INSERT OR REPLACE INTO {table_name} (
-        last_date, last_open, last_close, last_rsi, last_williams, last_adx,
-        pred_1_1, pred_1_2, pred_2_1, pred_2_2, pred_3_1, pred_3_2,
-        pred_4_1, pred_4_2, pred_5_1, pred_5_2, pred_6_1, pred_6_2
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """
-    
-    # Execute query with the predictions unpacked into individual values
-    cursor.execute(insert_query, (
-        last_date, last_open, last_close, last_rsi, last_williams, last_adx,
-        *predictions  # Unpack the predictions list into individual columns
-    ))
-    conn.commit()
-
 def array_to_comma_separated_string(array: np.ndarray) -> str:
     """
     Converts a numpy.ndarray into a comma-separated string.
@@ -946,24 +900,120 @@ def array_to_comma_separated_string(array: np.ndarray) -> str:
     # Convert the elements to strings and join with commas
     return ",".join(map(str, flat_array))
 
+def create_table_if_not_exists(stock, table_date):
+    """
+    Creates a table for a specific stock and date if it doesn't exist.
+    Returns the table name.
+    
+    Args:
+        stock (str): Stock symbol
+        table_date (datetime): Date for the table
+    
+    Returns:
+        str: Name of the created/existing table
+    """
+    # Create a safe table name using stock and date
+    table_name = f"{stock}_{table_date.strftime('%Y_%m_%d')}"
+    
+    # SQL for creating the table
+    create_table_sql = """
+    CREATE TABLE IF NOT EXISTS {} (
+        date DATE PRIMARY KEY,
+        open REAL,
+        close REAL,
+        rsi REAL,
+        williams REAL,
+        adx REAL,
+        pred_1_1 TEXT,
+        pred_1_2 TEXT,
+        pred_2_1 TEXT,
+        pred_2_2 TEXT,
+        pred_3_1 TEXT,
+        pred_3_2 TEXT,
+        pred_4_1 TEXT,
+        pred_4_2 TEXT,
+        pred_5_1 TEXT,
+        pred_5_2 TEXT,
+        pred_6_1 TEXT,
+        pred_6_2 TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """.format(table_name)
+    
+    # Connect to database and create table
+    conn = sqlite3.connect('trading_algo.db')
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute(create_table_sql)
+        conn.commit()
+    finally:
+        conn.close()
+    
+    return table_name
+
+def insert_predictions(table_name, last_date, last_open, last_close, 
+                      last_rsi, last_williams, last_adx, predictions):
+    """
+    Inserts a new row of predictions and metrics into the specified table.
+    
+    Args:
+        table_name (str): Name of the table to insert into
+        last_date (date): Date of the prediction
+        last_open (float): Opening price
+        last_close (float): Closing price
+        last_rsi (float): RSI indicator value
+        last_williams (float): Williams indicator value
+        last_adx (float): ADX indicator value
+        predictions (list): List of 12 prediction strings (6 pairs of predictions)
+    """
+    # SQL for inserting predictions
+    insert_sql = f"""
+    INSERT OR REPLACE INTO {table_name} (
+        date, open, close, rsi, williams, adx,
+        pred_1_1, pred_1_2, pred_2_1, pred_2_2,
+        pred_3_1, pred_3_2, pred_4_1, pred_4_2,
+        pred_5_1, pred_5_2, pred_6_1, pred_6_2
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    
+    # Connect to database and insert data
+    conn = sqlite3.connect('trading_algo.db')
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute(insert_sql, (
+            last_date, last_open, last_close, last_rsi, last_williams, last_adx,
+            *predictions  # Unpacks the 12 prediction strings
+        ))
+        conn.commit()
+    finally:
+        conn.close()
+
+testing = True
 conn = sqlite3.connect("trading_algo.db")
 cursor = conn.cursor()
 opt_history = OptimizationHistory()
 api_token = 'lFVm52EqS8EuypuH9FqhzhMAbo7zbeNb'
 technical_indicators = ['williams', 'rsi', 'adx']
 market_days = get_market_days(2015, 2026)
-data_num = 8
-future_days = 30
+if testing:
+    data_num = 2
+    future_days = 2
+    stocks = ['AAPL', 'MSFT']
+else:
+    data_num = 8
+    future_days = 30
+    stocks = [
+        'AAPL', 'MSFT', 'AMZN', 'NVDA', 'GOOGL', 'GOOG', 'META', 'BRK.B', 'TSLA', 'UNH',
+        'LLY', 'JPM', 'XOM', 'JNJ', 'V', 'PG', 'AVGO', 'MA', 'HD', 'CVX',
+        'MRK', 'ABBV', 'PEP', 'COST', 'ADBE', 'KO', 'CSCO', 'WMT', 'TMO', 'MCD',
+        'PFE', 'CRM', 'BAC', 'ACN', 'CMCSA', 'LIN', 'NFLX', 'ABT', 'ORCL', 'DHR',
+        'AMD', 'WFC', 'DIS', 'TXN', 'PM', 'VZ', 'INTU', 'COP', 'CAT', 'AMGN'
+    ]
 future_date = datetime.now()
 start_date = future_date - timedelta(days=3000)
 full_dates = dates()
-stocks = [
-    'AAPL', 'MSFT', 'AMZN', 'NVDA', 'GOOGL', 'GOOG', 'META', 'BRK.B', 'TSLA', 'UNH',
-    'LLY', 'JPM', 'XOM', 'JNJ', 'V', 'PG', 'AVGO', 'MA', 'HD', 'CVX',
-    'MRK', 'ABBV', 'PEP', 'COST', 'ADBE', 'KO', 'CSCO', 'WMT', 'TMO', 'MCD',
-    'PFE', 'CRM', 'BAC', 'ACN', 'CMCSA', 'LIN', 'NFLX', 'ABT', 'ORCL', 'DHR',
-    'AMD', 'WFC', 'DIS', 'TXN', 'PM', 'VZ', 'INTU', 'COP', 'CAT', 'AMGN'
-]
 
 for stock in stocks:
     print(f'Predicitons for {stock}')
@@ -989,6 +1039,7 @@ for stock in stocks:
             
             predictions = []
             for i in range(1, 7):
+                print(f'Version {i} Price Predicitons for {stock} on day {day}')
                 future_prices_method_1, future_prices_method_2 = versions(i, RESET)
                 # Convert to comma-separated strings
                 future_prices_method_1 = array_to_comma_separated_string(future_prices_method_1)

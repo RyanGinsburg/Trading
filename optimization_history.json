@@ -1,49 +1,190 @@
 {
     "aapl_v1": {
-        "time_step": 6,
-        "units": 62,
-        "dropout_rate": 0.22273788622625268,
-        "learning_rate": 0.000866376480007801
+        "time_step": 27,
+        "units": 40,
+        "dropout_rate": 0.18584520635155788,
+        "learning_rate": 0.0003927606298363497
     },
     "aapl_v2": {
-        "time_step": 28,
-        "units": 72,
-        "dropout_rate": 0.3801571737851236,
-        "learning_rate": 0.00010546590744301017
+        "time_step": 15,
+        "units": 82,
+        "dropout_rate": 0.3833648582515327,
+        "learning_rate": 0.00014067349803041125
     },
     "aapl_v3": {
-        "time_step": 1,
-        "units": 78,
-        "dropout_rate": 0.14410320666898246,
-        "learning_rate": 0.0007375702578439916,
-        "epochs": 23,
-        "batch_size": 68
+        "time_step": 8,
+        "units": 80,
+        "dropout_rate": 0.1445685362445605,
+        "learning_rate": 0.0008714669783130727,
+        "epochs": 18,
+        "batch_size": 85
     },
     "aapl_v4": {
-        "time_step": 20,
-        "units": 60,
-        "dropout_rate": 0.1507772833548308,
-        "learning_rate": 0.00019547886869257893,
-        "epochs": 12,
-        "batch_size": 20
+        "time_step": 17,
+        "units": 45,
+        "dropout_rate": 0.29125084603017115,
+        "learning_rate": 0.00014917358314727247,
+        "epochs": 17,
+        "batch_size": 41
     },
     "aapl_v5": {
-        "time_step": 21,
-        "units": 95,
-        "dropout_rate": 0.2517805677229994,
-        "learning_rate": 0.0003788676342084438,
-        "epochs": 25,
-        "batch_size": 75,
-        "decay_factor": 0.2808073040113061
+        "time_step": 14,
+        "units": 93,
+        "dropout_rate": 0.3054188890683067,
+        "learning_rate": 0.0001964248335355714,
+        "epochs": 11,
+        "batch_size": 76,
+        "decay_factor": 0.29859058720215115
     },
     "aapl_v6": {
-        "time_step": 21,
-        "units": 56,
-        "dropout_rate": 0.15670987013140442,
-        "learning_rate": 0.0015361779255427417,
-        "epochs": 30,
+        "time_step": 10,
+        "units": 63,
+        "dropout_rate": 0.12409646701908701,
+        "learning_rate": 0.001195457840101641,
+        "epochs": 13,
         "batch_size": 66,
-        "decay_factor": 0.3169992414089237,
-        "future_days": 40
+        "decay_factor": 0.31811700689213057,
+        "future_days": 31
+    },
+    "msft_v1": {
+        "time_step": 27,
+        "units": 47,
+        "dropout_rate": 0.2684424928793396,
+        "learning_rate": 0.002093672163116013
+    },
+    "msft_v2": {
+        "time_step": 3,
+        "units": 67,
+        "dropout_rate": 0.1252895448503972,
+        "learning_rate": 0.002921456151686267
+    },
+    "msft_v3": {
+        "time_step": 5,
+        "units": 87,
+        "dropout_rate": 0.13979401748727682,
+        "learning_rate": 0.0008064015561503498,
+        "epochs": 19,
+        "batch_size": 115
+    },
+    "msft_v4": {
+        "time_step": 17,
+        "units": 56,
+        "dropout_rate": 0.30434879138903415,
+        "learning_rate": 0.00010060482573543778,
+        "epochs": 22,
+        "batch_size": 58
+    },
+    "msft_v5": {
+        "time_step": 10,
+        "units": 79,
+        "dropout_rate": 0.15635468386767665,
+        "learning_rate": 0.0009110763362707351,
+        "epochs": 26,
+        "batch_size": 112,
+        "decay_factor": 0.37686424993198786
+    },
+    "msft_v6": {
+        "time_step": 13,
+        "units": 97,
+        "dropout_rate": 0.11144833885396857,
+        "learning_rate": 0.002984271067492544,
+        "epochs": 17,
+        "batch_size": 101,
+        "decay_factor": 0.237089351072985,
+        "future_days": 26
+    },
+    "AAPL_v1": {
+        "time_step": 16,
+        "units": 84,
+        "dropout_rate": 0.12325835853446476,
+        "learning_rate": 0.001102521619870086
+    },
+    "AAPL_v2": {
+        "time_step": 24,
+        "units": 50,
+        "dropout_rate": 0.3181033486468786,
+        "learning_rate": 0.003990186693187401
+    },
+    "AAPL_v3": {
+        "time_step": 16,
+        "units": 48,
+        "dropout_rate": 0.35094721892787023,
+        "learning_rate": 0.004097016704184519,
+        "epochs": 13,
+        "batch_size": 41
+    },
+    "AAPL_v4": {
+        "time_step": 27,
+        "units": 48,
+        "dropout_rate": 0.29900808661635864,
+        "learning_rate": 0.0014354559354024822,
+        "epochs": 18,
+        "batch_size": 31
+    },
+    "AAPL_v5": {
+        "time_step": 24,
+        "units": 82,
+        "dropout_rate": 0.43248260703295094,
+        "learning_rate": 0.0019658399293446776,
+        "epochs": 18,
+        "batch_size": 95,
+        "decay_factor": 0.20431907992359882
+    },
+    "AAPL_v6": {
+        "time_step": 20,
+        "units": 83,
+        "dropout_rate": 0.32613011959085264,
+        "learning_rate": 0.0027389993961431385,
+        "epochs": 24,
+        "batch_size": 88,
+        "decay_factor": 0.3786627259172595,
+        "future_days": 10
+    },
+    "MSFT_v1": {
+        "time_step": 5,
+        "units": 41,
+        "dropout_rate": 0.16069706647363763,
+        "learning_rate": 0.00032317813682660547
+    },
+    "MSFT_v2": {
+        "time_step": 15,
+        "units": 54,
+        "dropout_rate": 0.45347274932358134,
+        "learning_rate": 0.00018432538350713736
+    },
+    "MSFT_v3": {
+        "time_step": 1,
+        "units": 93,
+        "dropout_rate": 0.28672370305090833,
+        "learning_rate": 0.0009880792083343357,
+        "epochs": 28,
+        "batch_size": 101
+    },
+    "MSFT_v4": {
+        "time_step": 12,
+        "units": 56,
+        "dropout_rate": 0.2589982136225424,
+        "learning_rate": 0.000849644235490724,
+        "epochs": 24,
+        "batch_size": 73
+    },
+    "MSFT_v5": {
+        "time_step": 24,
+        "units": 72,
+        "dropout_rate": 0.2671846823822695,
+        "learning_rate": 0.0020751543317010044,
+        "epochs": 13,
+        "batch_size": 62,
+        "decay_factor": 0.3865472725968621
+    },
+    "MSFT_v6": {
+        "time_step": 10,
+        "units": 92,
+        "dropout_rate": 0.19414929784621093,
+        "learning_rate": 0.001057610706944653,
+        "epochs": 26,
+        "batch_size": 34,
+        "decay_factor": 0.3732084272738815,
+        "future_days": 8
     }
 }
