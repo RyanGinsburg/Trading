@@ -141,50 +141,50 @@
         "future_days": 10
     },
     "MSFT_v1": {
-        "time_step": 5,
-        "units": 41,
-        "dropout_rate": 0.16069706647363763,
-        "learning_rate": 0.00032317813682660547
+        "time_step": 24,
+        "units": 44,
+        "dropout_rate": 0.1474180955770901,
+        "learning_rate": 0.0001356751144171805
     },
     "MSFT_v2": {
-        "time_step": 15,
-        "units": 54,
-        "dropout_rate": 0.45347274932358134,
-        "learning_rate": 0.00018432538350713736
+        "time_step": 6,
+        "units": 33,
+        "dropout_rate": 0.16429109973530773,
+        "learning_rate": 0.00026579777262135954
     },
     "MSFT_v3": {
-        "time_step": 1,
+        "time_step": 18,
         "units": 93,
-        "dropout_rate": 0.28672370305090833,
-        "learning_rate": 0.0009880792083343357,
-        "epochs": 28,
-        "batch_size": 101
+        "dropout_rate": 0.2160490631686548,
+        "learning_rate": 0.0018516813922031393,
+        "epochs": 15,
+        "batch_size": 91
     },
     "MSFT_v4": {
-        "time_step": 12,
-        "units": 56,
-        "dropout_rate": 0.2589982136225424,
-        "learning_rate": 0.000849644235490724,
-        "epochs": 24,
-        "batch_size": 73
+        "time_step": 26,
+        "units": 70,
+        "dropout_rate": 0.33099598856132467,
+        "learning_rate": 0.0007301873905920038,
+        "epochs": 30,
+        "batch_size": 55
     },
     "MSFT_v5": {
-        "time_step": 24,
-        "units": 72,
-        "dropout_rate": 0.2671846823822695,
-        "learning_rate": 0.0020751543317010044,
-        "epochs": 13,
-        "batch_size": 62,
-        "decay_factor": 0.3865472725968621
+        "time_step": 4,
+        "units": 87,
+        "dropout_rate": 0.3284773116909101,
+        "learning_rate": 0.0008010704765561814,
+        "epochs": 28,
+        "batch_size": 66,
+        "decay_factor": 0.33347057394182933
     },
     "MSFT_v6": {
-        "time_step": 10,
-        "units": 92,
-        "dropout_rate": 0.19414929784621093,
-        "learning_rate": 0.001057610706944653,
-        "epochs": 26,
-        "batch_size": 34,
-        "decay_factor": 0.3732084272738815,
-        "future_days": 8
+        "time_step": 6,
+        "units": 95,
+        "dropout_rate": 0.15273660027902336,
+        "learning_rate": 0.0004431428903543239,
+        "epochs": 22,
+        "batch_size": 49,
+        "decay_factor": 0.30360565974901943,
+        "future_days": 1
     }
 }

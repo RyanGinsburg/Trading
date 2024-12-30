@@ -16,7 +16,6 @@ import json
 import os
 from pathlib import Path
 import sqlite3
-import multiprocessing
 
 def get_market_days(start_year, end_year, exchange='NYSE'):
     market_calendar = mcal.get_calendar(exchange)
@@ -45,46 +44,35 @@ def fetch_technical_data(stock, start_date, end_date, technical_indicators=['rsi
     return combined_df.loc[pd.to_datetime(start_date):pd.to_datetime(end_date)]
 
 class OptimizationHistory:
-    def __init__(self, db_name='optimization_history.db'):
-        self.db_name = db_name
-        self._initialize_db()
+    def __init__(self, filepath='optimization_history.json'):
+        self.filepath = Path(filepath)
+        self.history = self._load_history()
 
-    def _initialize_db(self):
-        """Create the database table if it doesn't already exist."""
-        with sqlite3.connect(self.db_name) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS optimization_history (
-                    stock TEXT NOT NULL,
-                    version INTEGER NOT NULL,
-                    parameters TEXT NOT NULL,
-                    PRIMARY KEY (stock, version)
-                )
-            """)
-            conn.commit()
+    def _load_history(self):
+        """Load existing history from file or create new if doesn't exist"""
+        if self.filepath.exists():
+            try:
+                with open(self.filepath, 'r') as f:
+                    return json.load(f)
+            except json.JSONDecodeError:
+                return {}
+        return {}
+
+    def _save_history(self):
+        """Save history to file"""
+        with open(self.filepath, 'w') as f:
+            json.dump(self.history, f, indent=4)
 
     def get_parameters(self, stock, version):
-        """Retrieve stored parameters for a specific stock and version."""
-        with sqlite3.connect(self.db_name) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT parameters FROM optimization_history
-                WHERE stock = ? AND version = ?
-            """, (stock, version))
-            result = cursor.fetchone()
-            if result:
-                return json.loads(result[0])  # Convert JSON string back to Python dict
-            return None
+        """Retrieve stored parameters for a specific stock and version"""
+        key = f"{stock}_v{version}"
+        return self.history.get(key, None)
 
     def store_parameters(self, stock, version, parameters):
-        """Store parameters for a specific stock and version."""
-        with sqlite3.connect(self.db_name) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT OR REPLACE INTO optimization_history (stock, version, parameters)
-                VALUES (?, ?, ?)
-            """, (stock, version, json.dumps(parameters)))  # Convert dict to JSON string
-            conn.commit()
+        """Store parameters for a specific stock and version"""
+        key = f"{stock}_v{version}"
+        self.history[key] = parameters
+        self._save_history()
 
 def create_optimization_trial(previous_params):
     """
@@ -109,7 +97,7 @@ def create_optimization_trial(previous_params):
     
     return suggest_with_history
 
-def versions(i, stock, stock_data, RESET=False):
+def versions(i, RESET=False):
     if i == 1:
         def v1_create_dataset(data, time_step):
             X, y = [], []
@@ -870,9 +858,11 @@ def versions(i, stock, stock_data, RESET=False):
 
 def dates():
     dates = [
+        datetime(2022, 1, 1),
         datetime(2023, 2, 6),
         datetime(2024, 1, 9),
         datetime(2024, 5, 2),
+        datetime(2024, 11, 1),
     ]
 
     # Create a new list to store results
@@ -892,15 +882,42 @@ def dates():
     return(result_dates)
 
 def array_to_comma_separated_string(array: np.ndarray) -> str:
-    """Converts a numpy.ndarray into a comma-separated string."""
+    """
+    Converts a numpy.ndarray into a comma-separated string.
+
+    Parameters:
+        array (np.ndarray): The input numpy array.
+
+    Returns:
+        str: A string of the array's elements, separated by commas.
+    """
+    if not isinstance(array, np.ndarray):
+        raise ValueError("Input must be a numpy.ndarray")
+
+    # Flatten the array to handle multidimensional arrays
     flat_array = array.flatten()
+
+    # Convert the elements to strings and join with commas
     return ",".join(map(str, flat_array))
 
-def create_table_if_not_exists(stock, table_date, db_name):
-    """Creates a table for a specific stock and date if it doesn't exist."""
+def create_table_if_not_exists(stock, table_date):
+    """
+    Creates a table for a specific stock and date if it doesn't exist.
+    Returns the table name.
+    
+    Args:
+        stock (str): Stock symbol
+        table_date (datetime): Date for the table
+    
+    Returns:
+        str: Name of the created/existing table
+    """
+    # Create a safe table name using stock and date
     table_name = f"{stock}_{table_date.strftime('%Y_%m_%d')}"
-    create_table_sql = f"""
-    CREATE TABLE IF NOT EXISTS {table_name} (
+    
+    # SQL for creating the table
+    create_table_sql = """
+    CREATE TABLE IF NOT EXISTS {} (
         date DATE PRIMARY KEY,
         open REAL,
         close REAL,
@@ -921,15 +938,36 @@ def create_table_if_not_exists(stock, table_date, db_name):
         pred_6_2 TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
-    """
-    with sqlite3.connect(db_name) as conn:
-        cursor = conn.cursor()
+    """.format(table_name)
+    
+    # Connect to database and create table
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    
+    try:
         cursor.execute(create_table_sql)
         conn.commit()
+    finally:
+        conn.close()
+    
     return table_name
 
-def insert_predictions(table_name, last_date, last_open, last_close, last_rsi, last_williams, last_adx, predictions, db_name):
-    """Inserts a new row of predictions and metrics into the specified table."""
+def insert_predictions(table_name, last_date, last_open, last_close, 
+                      last_rsi, last_williams, last_adx, predictions):
+    """
+    Inserts a new row of predictions and metrics into the specified table.
+    
+    Args:
+        table_name (str): Name of the table to insert into
+        last_date (date): Date of the prediction
+        last_open (float): Opening price
+        last_close (float): Closing price
+        last_rsi (float): RSI indicator value
+        last_williams (float): Williams indicator value
+        last_adx (float): ADX indicator value
+        predictions (list): List of 12 prediction strings (6 pairs of predictions)
+    """
+    # SQL for inserting predictions
     insert_sql = f"""
     INSERT OR REPLACE INTO {table_name} (
         date, open, close, rsi, williams, adx,
@@ -938,63 +976,28 @@ def insert_predictions(table_name, last_date, last_open, last_close, last_rsi, l
         pred_5_1, pred_5_2, pred_6_1, pred_6_2
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
-    with sqlite3.connect(db_name) as conn:
-        cursor = conn.cursor()
-        cursor.execute(insert_sql, (last_date, last_open, last_close, last_rsi, last_williams, last_adx, *predictions))
+    
+    # Connect to database and insert data
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute(insert_sql, (
+            last_date, last_open, last_close, last_rsi, last_williams, last_adx,
+            *predictions  # Unpacks the 12 prediction strings
+        ))
         conn.commit()
+    finally:
+        conn.close()
 
-def process_stock(stock):
-    print("************************************************************************")
-    print(f'[1] Starting to process predictions for {stock}')
-    full_data = fetch_technical_data(stock, start_date, future_date, technical_indicators)
-
-    for dates_index, dates_ in enumerate(full_dates, start=1):
-        print("________________________________________________________")
-        print(f'[2] {stock} Processing date group {dates_index} for {stock}')
-        print("________________________________________________________")
-        table_date = dates_[0]
-        table_name = create_table_if_not_exists(stock, table_date, db_name)
-
-        for day, date in enumerate(dates_):
-            print("________________________________________________________")
-            print(f'3] {stock} Processing day {day + 1} for date {date}')
-            print("________________________________________________________")
-            stock_data = full_data.loc[start_date:date]
-
-            last_row = stock_data.iloc[-1]
-            last_date = last_row.name.date()
-            last_close = last_row['close']
-            last_open = last_row['open']
-            last_rsi = last_row['rsi']
-            last_williams = last_row['williams']
-            last_adx = last_row['adx']
-
-            predictions = []
-            for i in range(1, 7):
-                RESET = day % 5 == 0
-                future_prices_method_1, future_prices_method_2 = versions(i, stock, stock_data, RESET)
-                predictions.append(array_to_comma_separated_string(future_prices_method_1))
-                predictions.append(array_to_comma_separated_string(future_prices_method_2))
-                print("________________________________________________________")
-                print(f'[4] {stock} Generated predictions for version {i}')
-                print("________________________________________________________")
-
-            insert_predictions(table_name, last_date, last_open, last_close, last_rsi, last_williams, last_adx, predictions, db_name)
-
-    print(f'[11] Finished processing predictions for {stock}')
-
-# Initialize global variables and constants
 testing = True
 db_name = 'trading_algo.db'
-api_token = 'lFVm52EqS8EuypuH9FqhzhMAbo7zbeNb'
-technical_indicators = ['williams', 'rsi', 'adx']
 conn = sqlite3.connect(db_name)
 cursor = conn.cursor()
-conn.close()
-
-opt_history = OptimizationHistory('optimization_history.db')
+opt_history = OptimizationHistory()
+api_token = 'lFVm52EqS8EuypuH9FqhzhMAbo7zbeNb'
+technical_indicators = ['williams', 'rsi', 'adx']
 market_days = get_market_days(2015, 2026)
-
 if testing:
     data_num = 2
     future_days = 2
@@ -1003,20 +1006,52 @@ else:
     data_num = 8
     future_days = 30
     stocks = [
-        'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMD', 'ORCL', #technology
-        'UNH', 'LLY', 'JNJ', 'MRK', 'ABBV', 'ABT', 'AMGN', #healthcare
-        'JPM', 'BRK.B', 'V', 'MA', 'BAC', 'WFC', #finance
-        'AMZN', 'TSLA', 'MCD', 'HD', #consumer discretionary
-        'XOM', 'CVX', 'COP', #energy
-        'NFLX', 'DIS', 'CMCSA', #communication services
-        'KO', 'PEP' #consumer staples
+        'AAPL', 'MSFT', 'AMZN', 'NVDA', 'GOOGL', 'GOOG', 'META', 'BRK.B', 'TSLA', 'UNH',
+        'LLY', 'JPM', 'XOM', 'JNJ', 'V', 'PG', 'AVGO', 'MA', 'HD', 'CVX',
+        'MRK', 'ABBV', 'PEP', 'COST', 'ADBE', 'KO', 'CSCO', 'WMT', 'TMO', 'MCD',
+        'PFE', 'CRM', 'BAC', 'ACN', 'CMCSA', 'LIN', 'NFLX', 'ABT', 'ORCL', 'DHR',
+        'AMD', 'WFC', 'DIS', 'TXN', 'PM', 'VZ', 'INTU', 'COP', 'CAT', 'AMGN'
     ]
-
 future_date = datetime.now()
 start_date = future_date - timedelta(days=3000)
 full_dates = dates()
 
-if __name__ == "__main__":
-    # Use multiprocessing to process stocks in parallel
-    with multiprocessing.Pool(processes=11) as pool:
-        pool.map(process_stock, stocks)
+for stock in stocks:
+    print(f'Predicitons for {stock}')
+    full_data = fetch_technical_data(stock, start_date, future_date, technical_indicators)
+    for dates_ in full_dates:
+        table_date = dates_[0]
+        print(f'{stock} predicitons starting at {str(table_date)})')
+        table_name = create_table_if_not_exists(stock, table_date)
+        for day, date in enumerate(dates_):
+            print(f'Day {day}')
+            stock_data = full_data.loc[start_date:date]
+            if day % 5 == 0:
+                RESET = True
+            else:
+                RESET = False
+            last_row = stock_data.iloc[-1]
+            last_date = last_row.name.date()
+            last_close = last_row['close']
+            last_open = last_row['open']
+            last_rsi = last_row['rsi']
+            last_williams = last_row['williams']
+            last_adx = last_row['adx']
+            
+            predictions = []
+            for i in range(1, 7):
+                print(f'Version {i} Price Predicitons for {stock} on day {day}')
+                future_prices_method_1, future_prices_method_2 = versions(i, RESET)
+                # Convert to comma-separated strings
+                future_prices_method_1 = array_to_comma_separated_string(future_prices_method_1)
+                future_prices_method_2 = array_to_comma_separated_string(future_prices_method_2)
+
+                predictions.append(future_prices_method_1)
+                predictions.append(future_prices_method_2)
+                
+            insert_predictions(
+                table_name, last_date, last_open, last_close,
+                last_rsi, last_williams, last_adx, predictions
+            )
+            conn.commit()
+conn.close()
