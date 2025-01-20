@@ -1,0 +1,51 @@
+{
+  "AAPL": {
+    "1": {
+      "time_step": 26,
+      "units": 69,
+      "dropout_rate": 0.14645194364180797,
+      "learning_rate": 0.0086241216439346
+    },
+    "2": {
+      "time_step": 5,
+      "units": 96,
+      "dropout_rate": 0.16391442490912822,
+      "learning_rate": 0.0021012535584804563
+    },
+    "3": {
+      "time_step": 5,
+      "units": 43,
+      "dropout_rate": 0.18100767213956198,
+      "learning_rate": 0.002045846891880193,
+      "epochs": 23,
+      "batch_size": 25
+    },
+    "4": {
+      "time_step": 6,
+      "units": 60,
+      "dropout_rate": 0.22857532296274866,
+      "learning_rate": 0.00453978911331877,
+      "epochs": 24,
+      "batch_size": 31
+    },
+    "5": {
+      "time_step": 9,
+      "units": 66,
+      "dropout_rate": 0.2458609444822726,
+      "learning_rate": 0.001606394247178094,
+      "epochs": 25,
+      "batch_size": 62,
+      "decay_factor": 0.4686971951447677
+    },
+    "6": {
+      "time_step": 18,
+      "units": 54,
+      "dropout_rate": 0.44419354447874265,
+      "learning_rate": 0.0005604486431178074,
+      "epochs": 24,
+      "batch_size": 69,
+      "decay_factor": 0.269107118723155,
+      "future_days": 35
+    }
+  }
+}

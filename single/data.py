@@ -1,22 +1,21 @@
-import numpy as np
-from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
-from keras import Sequential
+import numpy as np # type: ignore
+from sklearn.preprocessing import MinMaxScaler # type: ignore
+from keras import Sequential # type: ignore
 from keras.layers import LSTM, Dense, Dropout  # type: ignore
 from keras.callbacks import EarlyStopping  # type: ignore
 from keras.regularizers import l2 # type: ignore
 from keras.optimizers import Adam # type: ignore
 from datetime import datetime, timedelta
-import requests
-import pandas as pd
-import optuna
-import tensorflow as tf
-import pandas_market_calendars as mcal
+import requests # type: ignore
+import pandas as pd # type: ignore
+import optuna # type: ignore
+import tensorflow as tf # type: ignore
+import pandas_market_calendars as mcal # type: ignore
 import json
-import os
-from pathlib import Path
 import sqlite3
 import multiprocessing
+from multiprocessing import shared_memory
+import gc
 
 def get_market_days(start_year, end_year, exchange='NYSE'):
     market_calendar = mcal.get_calendar(exchange)
@@ -943,48 +942,112 @@ def insert_predictions(table_name, last_date, last_open, last_close, last_rsi, l
         cursor.execute(insert_sql, (last_date, last_open, last_close, last_rsi, last_williams, last_adx, *predictions))
         conn.commit()
 
-def process_stock(stock):
+def process_stocks(stock):
     print("************************************************************************")
-    print(f'[1] Starting to process predictions for {stock}')
+    print(f'Starting to process predictions for {stock}')
+    print("************************************************************************")
+
+    # Fetch full_data and convert to NumPy array
     full_data = fetch_technical_data(stock, start_date, future_date, technical_indicators)
+    full_data_np = full_data.to_numpy()
+    full_data_columns = full_data.columns  # Save column names for reconstruction
+    full_data_index = full_data.index      # Save index for reconstruction
+
+    # Create shared memory
+    shm = shared_memory.SharedMemory(create=True, size=full_data_np.nbytes)
+    np_full_data = np.ndarray(full_data_np.shape, dtype=full_data_np.dtype, buffer=shm.buf)
+    np_full_data[:] = full_data_np[:]  # Copy data into shared memory
 
     for dates_index, dates_ in enumerate(full_dates, start=1):
-        print("________________________________________________________")
-        print(f'[2] {stock} Processing date group {dates_index} for {stock}')
+        print("********************************************************")
+        print(f'{stock} Processing date group {dates_index} for {stock}')
         print("________________________________________________________")
         table_date = dates_[0]
         table_name = create_table_if_not_exists(stock, table_date, db_name)
 
-        for day, date in enumerate(dates_):
-            print("________________________________________________________")
-            print(f'3] {stock} Processing day {day + 1} for date {date}')
-            print("________________________________________________________")
-            stock_data = full_data.loc[start_date:date]
+        # Apply slicing for AAPL, otherwise process all dates
+        if stock == "AAPL":
+            dates_to_process = dates_[22:]  # Start from the 23th day
+        else:
+            dates_to_process = dates_  # Process all dates
 
-            last_row = stock_data.iloc[-1]
-            last_date = last_row.name.date()
-            last_close = last_row['close']
-            last_open = last_row['open']
-            last_rsi = last_row['rsi']
-            last_williams = last_row['williams']
-            last_adx = last_row['adx']
+        # Prepare arguments with shared memory name
+        args_list = [(date, table_name, shm.name, full_data_np.shape, full_data_np.dtype, full_data_columns, full_data_index, stock, dates_index) for date in dates_to_process]
 
-            predictions = []
-            for i in range(1, 7):
-                RESET = day % 5 == 0
-                future_prices_method_1, future_prices_method_2 = versions(i, stock, stock_data, RESET)
-                predictions.append(array_to_comma_separated_string(future_prices_method_1))
-                predictions.append(array_to_comma_separated_string(future_prices_method_2))
-                print("________________________________________________________")
-                print(f'[4] {stock} Generated predictions for version {i}')
-                print("________________________________________________________")
+        with multiprocessing.Pool(processes=processes_num) as pool:
+            pool.starmap(process_dates, args_list)
 
-            insert_predictions(table_name, last_date, last_open, last_close, last_rsi, last_williams, last_adx, predictions, db_name)
+    # Clean up shared memory
+    shm.close()
+    shm.unlink()
 
     print(f'[11] Finished processing predictions for {stock}')
+    gc.collect()
 
-# Initialize global variables and constants
-testing = True
+def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stock, day):
+    print("________________________________________________________")
+    print(f'[1] {stock} Processing day {day} for date {date}')
+    print("________________________________________________________")
+
+    # Access shared memory and reconstruct full_data
+    existing_shm = shared_memory.SharedMemory(name=shm_name)
+    np_full_data = np.ndarray(shape, dtype=dtype, buffer=existing_shm.buf)
+    full_data = pd.DataFrame(np_full_data, columns=columns, index=index)
+
+    stock_data = full_data.loc[start_date:date]
+
+    last_row = stock_data.iloc[-1]
+    last_date = last_row.name.date()
+    last_close = last_row['close']
+    last_open = last_row['open']
+    last_rsi = last_row['rsi']
+    last_williams = last_row['williams']
+    last_adx = last_row['adx']
+
+    predictions = []
+    for i in range(1, 7):
+        RESET = day % 5 == 0
+        future_prices_method_1, future_prices_method_2 = versions(i, stock, stock_data, RESET)
+        predictions.append(array_to_comma_separated_string(future_prices_method_1))
+        predictions.append(array_to_comma_separated_string(future_prices_method_2))
+        print("________________________________________________________")
+        print(f'[2] {stock} Generated predictions for version {i}')
+        print("________________________________________________________")
+
+    insert_predictions(table_name, last_date, last_open, last_close, last_rsi, last_williams, last_adx, predictions, db_name)
+    gc.collect()
+
+# variables changed by the user
+testing = False
+processes_num = 10
+
+if testing:
+    data_num = 2
+    future_days = 2
+    stocks = ['AAPL', 'MSFT']
+else:
+    part = 1
+    data_num = 7
+    future_days = 30
+    stocks = [
+        'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMD', 'ORCL', # technology
+        'UNH', 'LLY', 'JNJ', 'MRK', 'ABBV', 'ABT', 'AMGN', # healthcare
+        'JPM', 'BRK.B', 'V', 'MA', 'BAC', 'WFC', # finance
+        'AMZN', 'TSLA', 'MCD', 'HD', # consumer discretionary
+        'XOM', 'CVX', 'COP', # energy
+        'NFLX', 'DIS', 'CMCSA', # communication services
+        'KO', 'PEP' # consumer staples
+    ]
+    if part == 1:
+        stocks = stocks[:12]
+    elif part == 2:
+        stocks = stocks[12:24]
+    elif part == 3:
+        stocks = stocks[24:32]
+    else:
+        stocks = stocks[:1]
+
+# Global variables and constants
 db_name = 'trading_algo.db'
 api_token = 'lFVm52EqS8EuypuH9FqhzhMAbo7zbeNb'
 technical_indicators = ['williams', 'rsi', 'adx']
@@ -995,28 +1058,10 @@ conn.close()
 opt_history = OptimizationHistory('optimization_history.db')
 market_days = get_market_days(2015, 2026)
 
-if testing:
-    data_num = 2
-    future_days = 2
-    stocks = ['AAPL', 'MSFT']
-else:
-    data_num = 8
-    future_days = 30
-    stocks = [
-        'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMD', 'ORCL', #technology
-        'UNH', 'LLY', 'JNJ', 'MRK', 'ABBV', 'ABT', 'AMGN', #healthcare
-        'JPM', 'BRK.B', 'V', 'MA', 'BAC', 'WFC', #finance
-        'AMZN', 'TSLA', 'MCD', 'HD', #consumer discretionary
-        'XOM', 'CVX', 'COP', #energy
-        'NFLX', 'DIS', 'CMCSA', #communication services
-        'KO', 'PEP' #consumer staples
-    ]
-
 future_date = datetime.now()
 start_date = future_date - timedelta(days=3000)
 full_dates = dates()
 
 if __name__ == "__main__":
-    # Use multiprocessing to process stocks in parallel
-    with multiprocessing.Pool(processes=11) as pool:
-        pool.map(process_stock, stocks)
+    for stock in stocks:
+        process_stocks(stock)
