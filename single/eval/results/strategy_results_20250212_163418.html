@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Trading Strategy Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1400px; margin: auto; }
+        h1, h2, h3 { color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #2c3e50; color: white; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:hover { background-color: #f1f1f1; }
+        pre { background: #f8f9fa; padding: 10px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Trading Strategy Results</h1>
+    <h2>Global Best Strategy (by raw profit)</h2>
+    <pre>Prediction Source: pred_5_1
+Level1: level1_median_filter
+Level2: level2_threshold
+Level3: level3_rsi
+Level4: level4_aggressive
+Profit: $17.94
+Trades: 2
+Correct Trades: 2
+Accuracy: 100.00%
+Mean Pred Error: $3.24</pre>
+    <h2>Aggregate Best Strategy by Percentage Profit (Global)</h2>
+    <pre>
+Strategy Combination: ('pred_5_1', 'level1_median_filter', 'level2_threshold', 'level3_rsi', 'level4_aggressive')
+Average Profit Percentage: 11.76%
+Per Stock Profit Percentages: {'AAPL': 11.75853706495379}
+    </pre>
+    <h2>Per Stock – Group Details (Using Aggregate Best Strategy per Stock)</h2>
+<h3>Stock: AAPL</h3>
+<p>Best Overall Strategy Combination: ('pred_5_1', 'level1_median_filter', 'level2_threshold', 'level3_rsi', 'level4_aggressive')<br>Average Profit Percentage: 11.76%</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Group #</th>
+                <th>Perfect Profit (%)</th>
+                <th>Best Strategy Profit (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>1</td>
+                <td>12.44%</td>
+                <td>11.76%</td>
+            </tr>
+
+        </tbody>
+    </table>
+<h2>Best Strategy Per Stock (Aggregate Summary)</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Stock</th>
+                <th>Best Strategy Combo</th>
+                <th>Average Profit (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>AAPL</td>
+                <td>('pred_5_1', 'level1_median_filter', 'level2_threshold', 'level3_rsi', 'level4_aggressive')</td>
+                <td>11.76%</td>
+            </tr>
+
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

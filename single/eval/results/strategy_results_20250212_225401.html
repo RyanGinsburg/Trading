@@ -1,0 +1,734 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Trading Strategy Results</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .container { max-width: 1200px; margin: auto; }
+                h1, h2, h3 { color: #2c3e50; }
+                .stock-section { margin-bottom: 40px; padding: 10px; border: 1px solid #ddd; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+                th { background-color: #f0f0f0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Trading Strategy Results</h1>
+        <div class='stock-section'><h2>Stock: AAPL</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_3_1<br>
+                            L1: level1_raw<br>
+                            L2: level2_simple_comparison<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$14.41</td>
+                        <td>9.44%</td>
+                        <td>7</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $6.71, % Profit: 4.40%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $18.98, % Profit: 12.44%, Trades: 8</p>
+                <hr>
+                
+                <h3>Group 2</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_2_2<br>
+                            L1: level1_weighted_average<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_rsi<br>
+                            L4: level4_aggressive
+                        </td>
+                        <td>$12.92</td>
+                        <td>7.02%</td>
+                        <td>4</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $0.45, % Profit: 0.24%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $2.31, % Profit: 1.26%, Trades: 6</p>
+                <hr>
+                
+                <h3>Group 3</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_2_2<br>
+                            L1: level1_median_filter<br>
+                            L2: level2_momentum<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$29.30</td>
+                        <td>16.98%</td>
+                        <td>1</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $39.98, % Profit: 23.18%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $37.60, % Profit: 21.80%, Trades: 5</p>
+                <hr>
+                
+                <h3>Cumulative for AAPL</h3>
+                <p><strong>Best Cumulative Strategy:</strong> Prediction pred_6_1, L1: level1_raw, L2: level2_simple_comparison, L3: level3_no_adjustment, L4: level4_conservative</p>
+                <p><strong>Cumulative Profit Percentage:</strong> 5.94%</p>
+                <p><strong>Cumulative Buy and Hold:</strong> Profit: $47.14, % Profit: 9.26%</p>
+            </div>
+            <div class='stock-section'><h2>Stock: AMD</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_1_3<br>
+                            L1: level1_exponential_average<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$23.77</td>
+                        <td>28.09%</td>
+                        <td>3</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $11.30, % Profit: 13.35%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $20.19, % Profit: 23.86%, Trades: 6</p>
+                <hr>
+                
+                <h3>Group 2</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_4_2<br>
+                            L1: level1_raw<br>
+                            L2: level2_simple_comparison<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$37.83</td>
+                        <td>25.92%</td>
+                        <td>5</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $35.91, % Profit: 24.60%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $48.21, % Profit: 33.03%, Trades: 8</p>
+                <hr>
+                
+                <h3>Group 3</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_5_2<br>
+                            L1: level1_raw<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_rsi<br>
+                            L4: level4_aggressive
+                        </td>
+                        <td>$33.22</td>
+                        <td>22.83%</td>
+                        <td>7</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $14.12, % Profit: 9.70%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $25.80, % Profit: 17.73%, Trades: 6</p>
+                <hr>
+                
+                <h3>Cumulative for AMD</h3>
+                <p><strong>Best Cumulative Strategy:</strong> Prediction pred_1_3, L1: level1_exponential_average, L2: level2_trend_analysis, L3: level3_no_adjustment, L4: level4_conservative</p>
+                <p><strong>Cumulative Profit Percentage:</strong> 19.88%</p>
+                <p><strong>Cumulative Buy and Hold:</strong> Profit: $61.33, % Profit: 16.31%</p>
+            </div>
+            <div class='stock-section'><h2>Stock: GOOGL</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_1_1<br>
+                            L1: level1_median_filter<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_rsi<br>
+                            L4: level4_aggressive
+                        </td>
+                        <td>$14.89</td>
+                        <td>14.54%</td>
+                        <td>4</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $2.52, % Profit: 2.46%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $15.70, % Profit: 15.33%, Trades: 5</p>
+                <hr>
+                
+                <h3>Group 2</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_1_3<br>
+                            L1: level1_median_filter<br>
+                            L2: level2_volatility_based<br>
+                            L3: level3_rsi<br>
+                            L4: level4_aggressive
+                        </td>
+                        <td>$14.37</td>
+                        <td>10.38%</td>
+                        <td>7</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $5.59, % Profit: 4.04%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $14.65, % Profit: 10.58%, Trades: 6</p>
+                <hr>
+                
+                <h3>Group 3</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_5_1<br>
+                            L1: level1_raw<br>
+                            L2: level2_simple_comparison<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$13.99</td>
+                        <td>8.49%</td>
+                        <td>2</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $12.00, % Profit: 7.28%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $17.80, % Profit: 10.80%, Trades: 6</p>
+                <hr>
+                
+                <h3>Cumulative for GOOGL</h3>
+                <p><strong>Best Cumulative Strategy:</strong> Prediction pred_1_1, L1: level1_weighted_average, L2: level2_volatility_based, L3: level3_rsi, L4: level4_aggressive</p>
+                <p><strong>Cumulative Profit Percentage:</strong> 7.45%</p>
+                <p><strong>Cumulative Buy and Hold:</strong> Profit: $20.11, % Profit: 4.96%</p>
+            </div>
+            <div class='stock-section'><h2>Stock: LLY</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_4_1<br>
+                            L1: level1_raw<br>
+                            L2: level2_momentum<br>
+                            L3: level3_rsi<br>
+                            L4: level4_aggressive
+                        </td>
+                        <td>$20.19</td>
+                        <td>5.90%</td>
+                        <td>3</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $-10.90, % Profit: -3.19%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $40.12, % Profit: 11.73%, Trades: 6</p>
+                <hr>
+                
+                <h3>Group 2</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_5_1<br>
+                            L1: level1_raw<br>
+                            L2: level2_simple_comparison<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$146.16</td>
+                        <td>23.20%</td>
+                        <td>9</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $139.53, % Profit: 22.14%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $189.36, % Profit: 30.05%, Trades: 7</p>
+                <hr>
+                
+                <h3>Cumulative for LLY</h3>
+                <p><strong>Best Cumulative Strategy:</strong> Prediction pred_5_1, L1: level1_raw, L2: level2_simple_comparison, L3: level3_no_adjustment, L4: level4_conservative</p>
+                <p><strong>Cumulative Profit Percentage:</strong> 13.59%</p>
+                <p><strong>Cumulative Buy and Hold:</strong> Profit: $128.63, % Profit: 13.23%</p>
+            </div>
+            <div class='stock-section'><h2>Stock: META</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_6_1<br>
+                            L1: level1_raw<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$32.98</td>
+                        <td>17.68%</td>
+                        <td>1</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $15.63, % Profit: 8.38%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $43.32, % Profit: 23.22%, Trades: 8</p>
+                <hr>
+                
+                <h3>Group 2</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_5_1<br>
+                            L1: level1_simple_average<br>
+                            L2: level2_volatility_based<br>
+                            L3: level3_combined<br>
+                            L4: level4_trend_following
+                        </td>
+                        <td>$128.98</td>
+                        <td>36.19%</td>
+                        <td>4</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $129.73, % Profit: 36.40%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $133.86, % Profit: 37.56%, Trades: 8</p>
+                <hr>
+                
+                <h3>Group 3</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_4_2<br>
+                            L1: level1_raw<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_rsi<br>
+                            L4: level4_aggressive
+                        </td>
+                        <td>$58.08</td>
+                        <td>13.23%</td>
+                        <td>7</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $65.32, % Profit: 14.88%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $50.20, % Profit: 11.44%, Trades: 7</p>
+                <hr>
+                
+                <h3>Cumulative for META</h3>
+                <p><strong>Best Cumulative Strategy:</strong> Prediction pred_1_2, L1: level1_median_filter, L2: level2_trend_analysis, L3: level3_williams, L4: level4_trend_following</p>
+                <p><strong>Cumulative Profit Percentage:</strong> 18.33%</p>
+                <p><strong>Cumulative Buy and Hold:</strong> Profit: $210.68, % Profit: 21.46%</p>
+            </div>
+            <div class='stock-section'><h2>Stock: MSFT</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_5_1<br>
+                            L1: level1_simple_average<br>
+                            L2: level2_simple_comparison<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$41.14</td>
+                        <td>15.98%</td>
+                        <td>4</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $16.34, % Profit: 6.35%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $31.02, % Profit: 12.05%, Trades: 6</p>
+                <hr>
+                
+                <h3>Group 2</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_3_2<br>
+                            L1: level1_median_filter<br>
+                            L2: level2_volatility_based<br>
+                            L3: level3_rsi<br>
+                            L4: level4_aggressive
+                        </td>
+                        <td>$49.18</td>
+                        <td>13.22%</td>
+                        <td>5</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $39.64, % Profit: 10.66%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $44.38, % Profit: 11.93%, Trades: 7</p>
+                <hr>
+                
+                <h3>Group 3</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_3_1<br>
+                            L1: level1_weighted_average<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$41.54</td>
+                        <td>10.45%</td>
+                        <td>7</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $44.91, % Profit: 11.29%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $43.43, % Profit: 10.92%, Trades: 7</p>
+                <hr>
+                
+                <h3>Cumulative for MSFT</h3>
+                <p><strong>Best Cumulative Strategy:</strong> Prediction pred_5_1, L1: level1_raw, L2: level2_simple_comparison, L3: level3_no_adjustment, L4: level4_conservative</p>
+                <p><strong>Cumulative Profit Percentage:</strong> 8.39%</p>
+                <p><strong>Cumulative Buy and Hold:</strong> Profit: $100.89, % Profit: 9.82%</p>
+            </div>
+            <div class='stock-section'><h2>Stock: NVDA</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_6_2<br>
+                            L1: level1_raw<br>
+                            L2: level2_volatility_based<br>
+                            L3: level3_rsi<br>
+                            L4: level4_aggressive
+                        </td>
+                        <td>$5.99</td>
+                        <td>28.78%</td>
+                        <td>5</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $5.39, % Profit: 25.90%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $5.32, % Profit: 25.56%, Trades: 5</p>
+                <hr>
+                
+                <h3>Group 2</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_1_2<br>
+                            L1: level1_raw<br>
+                            L2: level2_simple_comparison<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$24.52</td>
+                        <td>46.79%</td>
+                        <td>5</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $26.14, % Profit: 49.89%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $15.06, % Profit: 28.74%, Trades: 8</p>
+                <hr>
+                
+                <h3>Group 3</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_4_2<br>
+                            L1: level1_simple_average<br>
+                            L2: level2_simple_comparison<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$42.86</td>
+                        <td>50.75%</td>
+                        <td>3</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $47.43, % Profit: 56.16%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $30.77, % Profit: 36.44%, Trades: 6</p>
+                <hr>
+                
+                <h3>Cumulative for NVDA</h3>
+                <p><strong>Best Cumulative Strategy:</strong> Prediction pred_4_3, L1: level1_simple_average, L2: level2_simple_comparison, L3: level3_no_adjustment, L4: level4_conservative</p>
+                <p><strong>Cumulative Profit Percentage:</strong> 40.99%</p>
+                <p><strong>Cumulative Buy and Hold:</strong> Profit: $78.96, % Profit: 50.08%</p>
+            </div>
+            <div class='stock-section'><h2>Stock: ORCL</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_2_2<br>
+                            L1: level1_weighted_average<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$6.53</td>
+                        <td>7.30%</td>
+                        <td>6</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $-1.93, % Profit: -2.16%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $10.71, % Profit: 11.97%, Trades: 6</p>
+                <hr>
+                
+                <h3>Group 2</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_6_1<br>
+                            L1: level1_weighted_average<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_rsi<br>
+                            L4: level4_aggressive
+                        </td>
+                        <td>$16.18</td>
+                        <td>15.58%</td>
+                        <td>4</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $7.16, % Profit: 6.89%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $13.15, % Profit: 12.66%, Trades: 6</p>
+                <hr>
+                
+                <h3>Group 3</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_2_2<br>
+                            L1: level1_raw<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$26.47</td>
+                        <td>22.97%</td>
+                        <td>4</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $22.90, % Profit: 19.87%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $22.74, % Profit: 19.73%, Trades: 5</p>
+                <hr>
+                
+                <h3>Cumulative for ORCL</h3>
+                <p><strong>Best Cumulative Strategy:</strong> Prediction pred_2_2, L1: level1_median_filter, L2: level2_volatility_based, L3: level3_no_adjustment, L4: level4_conservative</p>
+                <p><strong>Cumulative Profit Percentage:</strong> 9.97%</p>
+                <p><strong>Cumulative Buy and Hold:</strong> Profit: $28.13, % Profit: 9.12%</p>
+            </div>
+            <div class='stock-section'><h2>Stock: UNH</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_4_1<br>
+                            L1: level1_weighted_average<br>
+                            L2: level2_simple_comparison<br>
+                            L3: level3_no_adjustment<br>
+                            L4: level4_conservative
+                        </td>
+                        <td>$31.41</td>
+                        <td>6.65%</td>
+                        <td>5</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $8.10, % Profit: 1.72%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $32.75, % Profit: 6.94%, Trades: 5</p>
+                <hr>
+                
+                <h3>Group 2</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_4_2<br>
+                            L1: level1_raw<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_rsi<br>
+                            L4: level4_aggressive
+                        </td>
+                        <td>$31.52</td>
+                        <td>5.86%</td>
+                        <td>7</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $-11.50, % Profit: -2.14%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $21.93, % Profit: 4.08%, Trades: 9</p>
+                <hr>
+                
+                <h3>Group 3</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            Prediction: pred_4_2<br>
+                            L1: level1_simple_average<br>
+                            L2: level2_trend_analysis<br>
+                            L3: level3_rsi<br>
+                            L4: level4_aggressive
+                        </td>
+                        <td>$40.52</td>
+                        <td>8.37%</td>
+                        <td>5</td>
+                    </tr>
+                </table>
+                <p><strong>Buy and Hold:</strong> Profit: $12.84, % Profit: 2.65%</p>
+                <p><strong>Perfect Trading:</strong> Profit: $75.96, % Profit: 15.69%, Trades: 6</p>
+                <hr>
+                
+                <h3>Cumulative for UNH</h3>
+                <p><strong>Best Cumulative Strategy:</strong> Prediction pred_4_1, L1: level1_raw, L2: level2_trend_analysis, L3: level3_rsi, L4: level4_aggressive</p>
+                <p><strong>Cumulative Profit Percentage:</strong> 4.14%</p>
+                <p><strong>Cumulative Buy and Hold:</strong> Profit: $9.44, % Profit: 0.63%</p>
+            </div>
+            
+            <div class='stock-section'>
+                <h2>Global Best Strategy</h2>
+                <p>Strategy: Prediction pred_5_1, L1: level1_raw, L2: level2_simple_comparison, L3: level3_no_adjustment, L4: level4_conservative</p>
+                <p>Global Cumulative Profit Percentage: 7.78%</p>
+                <p><strong>Global Buy and Hold:</strong> Profit: $685.31, % Profit: 11.00%</p>
+            </div>
+            
+            </div>
+        </body>
+        </html>
+        

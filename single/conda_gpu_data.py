@@ -39,7 +39,6 @@ else:
 
 # Global device variable for use in tf.device()
 device = "/GPU:0" if gpus else "no gpu detected"
-tf.debugging.set_log_device_placement(True)
 
 # -----------------------------
 # Utility Functions and Classes
@@ -864,13 +863,19 @@ def process_stocks(stock):
     np_full_data[:] = full_data_np[:]
 
     for dates_index, dates_ in enumerate(full_dates, start=1):
+        if stock == 'MRK' and dates_index<3:
+            continue
+        
         print("********************************************************")
         print(f'{stock} Processing date group {dates_index} for {stock}')
         print("________________________________________________________")
         table_date = dates_[0]
         table_name = create_table_if_not_exists(stock, table_date, db_name)
 
-        dates_to_process = dates_
+        if stock== 'MRK':
+            dates_to_process = dates_[16:]
+        else:
+            dates_to_process = dates_
 
         args_list = [(date, table_name, shm.name, full_data_np.shape, full_data_np.dtype, full_data_columns, full_data_index, stock, dates_index) for date in dates_to_process]
 
@@ -932,8 +937,8 @@ else:
     data_num = 7
     future_days = 30
     stocks = [
-        'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMD', 'ORCL',  # technology
-        'UNH', 'LLY', 'JNJ', 'MRK', 'ABBV', 'ABT', 'AMGN',         # healthcare
+
+        'MRK', 'ABBV', 'ABT', 'AMGN',         # healthcare
         'JPM', 'BRK.B', 'V', 'MA', 'BAC', 'WFC',                   # finance
         'AMZN', 'TSLA', 'MCD', 'HD',                               # consumer discretionary
         'XOM', 'CVX', 'COP',                                       # energy
@@ -945,7 +950,7 @@ else:
     elif part == 2:
         stocks = stocks[12:24]
     elif part == 3:
-        stocks = stocks[24:32]
+        stocks = stocks[24:]
     else:
         stocks = stocks[:1]
 

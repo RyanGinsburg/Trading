@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Trading Strategy Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1400px; margin: auto; }
+        h1, h2, h3 { color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #2c3e50; color: white; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:hover { background-color: #f1f1f1; }
+        pre { background: #f8f9fa; padding: 10px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Trading Strategy Results</h1>
+    <h2>Global Best Strategy (by raw profit)</h2>
+    <pre>Prediction Source: pred_5_1
+Level1: level1_simple_average
+Level2: level2_volatility_based
+Level3: level3_combined
+Level4: level4_trend_following
+Profit: $128.98
+Trades: 4
+Correct Trades: 4
+Accuracy: 100.00%
+Mean Pred Error: $17.11</pre>
+    <h2>Aggregate Best Strategy by Percentage Profit (Global)</h2>
+    <pre>
+Strategy Combination: ('pred_5_1', 'level1_median_filter', 'level2_simple_comparison', 'level3_no_adjustment', 'level4_conservative')
+Average Profit Percentage: 8.44%
+Per Stock Profit Percentages: {'AAPL': 1.490253449479275, 'AMD': 16.53961386645648, 'GOOGL': 3.553979372775821, 'META': 12.70702432046918, 'MSFT': 8.44233139453786, 'NVDA': 10.68935456731919, 'ORCL': 0.0}
+    </pre>
+    <h2>Per Stock – Group Details (Using Aggregate Best Strategy per Stock)</h2>
+<h3>Stock: AAPL</h3>
+<p>Best Overall Strategy Combination: ('pred_6_1', 'level1_raw', 'level2_simple_comparison', 'level3_no_adjustment', 'level4_conservative')<br>Average Profit Percentage: 5.80%</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Group #</th>
+                <th>Perfect Profit (%)</th>
+                <th>Best Strategy Profit (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>1</td>
+                <td>12.44%</td>
+                <td>0.00%</td>
+            </tr>
+
+            <tr>
+                <td>2</td>
+                <td>1.26%</td>
+                <td>2.00%</td>
+            </tr>
+
+            <tr>
+                <td>3</td>
+                <td>21.80%</td>
+                <td>15.40%</td>
+            </tr>
+
+        </tbody>
+    </table>
+<h3>Stock: AMD</h3>
+<p>Best Overall Strategy Combination: ('pred_5_2', 'level1_raw', 'level2_trend_analysis', 'level3_rsi', 'level4_aggressive')<br>Average Profit Percentage: 18.57%</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Group #</th>
+                <th>Perfect Profit (%)</th>
+                <th>Best Strategy Profit (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>1</td>
+                <td>23.86%</td>
+                <td>15.17%</td>
+            </tr>
+
+            <tr>
+                <td>2</td>
+                <td>33.03%</td>
+                <td>17.72%</td>
+            </tr>
+
+            <tr>
+                <td>3</td>
+                <td>17.73%</td>
+                <td>22.83%</td>
+            </tr>
+
+        </tbody>
+    </table>
+<h3>Stock: GOOGL</h3>
+<p>Best Overall Strategy Combination: ('pred_1_1', 'level1_weighted_average', 'level2_volatility_based', 'level3_rsi', 'level4_aggressive')<br>Average Profit Percentage: 8.04%</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Group #</th>
+                <th>Perfect Profit (%)</th>
+                <th>Best Strategy Profit (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>1</td>
+                <td>15.33%</td>
+                <td>12.57%</td>
+            </tr>
+
+            <tr>
+                <td>2</td>
+                <td>10.58%</td>
+                <td>6.35%</td>
+            </tr>
+
+            <tr>
+                <td>3</td>
+                <td>10.80%</td>
+                <td>5.19%</td>
+            </tr>
+
+        </tbody>
+    </table>
+<h3>Stock: META</h3>
+<p>Best Overall Strategy Combination: ('pred_1_2', 'level1_weighted_average', 'level2_trend_analysis', 'level3_no_adjustment', 'level4_conservative')<br>Average Profit Percentage: 17.69%</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Group #</th>
+                <th>Perfect Profit (%)</th>
+                <th>Best Strategy Profit (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>1</td>
+                <td>23.22%</td>
+                <td>10.97%</td>
+            </tr>
+
+            <tr>
+                <td>2</td>
+                <td>37.56%</td>
+                <td>33.11%</td>
+            </tr>
+
+            <tr>
+                <td>3</td>
+                <td>11.44%</td>
+                <td>8.99%</td>
+            </tr>
+
+        </tbody>
+    </table>
+<h3>Stock: MSFT</h3>
+<p>Best Overall Strategy Combination: ('pred_5_1', 'level1_raw', 'level2_simple_comparison', 'level3_no_adjustment', 'level4_conservative')<br>Average Profit Percentage: 8.78%</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Group #</th>
+                <th>Perfect Profit (%)</th>
+                <th>Best Strategy Profit (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>1</td>
+                <td>12.05%</td>
+                <td>10.97%</td>
+            </tr>
+
+            <tr>
+                <td>2</td>
+                <td>11.93%</td>
+                <td>12.73%</td>
+            </tr>
+
+            <tr>
+                <td>3</td>
+                <td>10.92%</td>
+                <td>2.65%</td>
+            </tr>
+
+        </tbody>
+    </table>
+<h3>Stock: NVDA</h3>
+<p>Best Overall Strategy Combination: ('pred_4_2', 'level1_weighted_average', 'level2_threshold', 'level3_combined', 'level4_trend_following')<br>Average Profit Percentage: 32.80%</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Group #</th>
+                <th>Perfect Profit (%)</th>
+                <th>Best Strategy Profit (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>1</td>
+                <td>25.56%</td>
+                <td>10.19%</td>
+            </tr>
+
+            <tr>
+                <td>2</td>
+                <td>28.74%</td>
+                <td>40.86%</td>
+            </tr>
+
+            <tr>
+                <td>3</td>
+                <td>36.44%</td>
+                <td>47.37%</td>
+            </tr>
+
+        </tbody>
+    </table>
+<h3>Stock: ORCL</h3>
+<p>Best Overall Strategy Combination: ('pred_1_1', 'level1_raw', 'level2_simple_comparison', 'level3_no_adjustment', 'level4_conservative')<br>Average Profit Percentage: 0.00%</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Group #</th>
+                <th>Perfect Profit (%)</th>
+                <th>Best Strategy Profit (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>1</td>
+                <td>0.00%</td>
+                <td>0.00%</td>
+            </tr>
+
+        </tbody>
+    </table>
+<h2>Best Strategy Per Stock (Aggregate Summary)</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Stock</th>
+                <th>Best Strategy Combo</th>
+                <th>Average Profit (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td>AAPL</td>
+                <td>('pred_6_1', 'level1_raw', 'level2_simple_comparison', 'level3_no_adjustment', 'level4_conservative')</td>
+                <td>5.80%</td>
+            </tr>
+
+            <tr>
+                <td>AMD</td>
+                <td>('pred_5_2', 'level1_raw', 'level2_trend_analysis', 'level3_rsi', 'level4_aggressive')</td>
+                <td>18.57%</td>
+            </tr>
+
+            <tr>
+                <td>GOOGL</td>
+                <td>('pred_1_1', 'level1_weighted_average', 'level2_volatility_based', 'level3_rsi', 'level4_aggressive')</td>
+                <td>8.04%</td>
+            </tr>
+
+            <tr>
+                <td>META</td>
+                <td>('pred_1_2', 'level1_weighted_average', 'level2_trend_analysis', 'level3_no_adjustment', 'level4_conservative')</td>
+                <td>17.69%</td>
+            </tr>
+
+            <tr>
+                <td>MSFT</td>
+                <td>('pred_5_1', 'level1_raw', 'level2_simple_comparison', 'level3_no_adjustment', 'level4_conservative')</td>
+                <td>8.78%</td>
+            </tr>
+
+            <tr>
+                <td>NVDA</td>
+                <td>('pred_4_2', 'level1_weighted_average', 'level2_threshold', 'level3_combined', 'level4_trend_following')</td>
+                <td>32.80%</td>
+            </tr>
+
+            <tr>
+                <td>ORCL</td>
+                <td>('pred_1_1', 'level1_raw', 'level2_simple_comparison', 'level3_no_adjustment', 'level4_conservative')</td>
+                <td>0.00%</td>
+            </tr>
+
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
