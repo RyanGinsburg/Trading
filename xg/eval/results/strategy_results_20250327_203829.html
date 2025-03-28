@@ -1,0 +1,208 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Trading Strategy Results</title>
+            
+    <style>
+      body {
+        font-family: 'Segoe UI', sans-serif;
+        background: #f9fbfd;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1000px;
+        margin: auto;
+      }
+      .stock-section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        margin-bottom: 30px;
+      }
+      .stock-section h2 {
+        margin-top: 0;
+        color: #2c3e50;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th, td {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+      }
+      th {
+        background-color: #eef3f7;
+        color: #2c3e50;
+      }
+      .strategy-label {
+        font-weight: bold;
+        color: #34495e;
+      }
+      .comparison-row {
+        background-color: #fefefe;
+      }
+    </style>
+    
+            <style>
+            .search-box {
+                margin: 10px 0;
+                padding: 5px;
+                width: 250px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+            }
+            th {
+                background-color: #f2f2f2;
+                cursor: pointer;
+                padding: 10px;
+            }
+            td {
+                padding: 8px;
+                text-align: center;
+            }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .stock-section {
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 20px;
+                border: 1px solid #ccc;
+                border-radius: 12px;
+                background-color: #fff;
+                margin-bottom: 40px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            }
+            </style>
+        </head>
+        <body>
+        <div class="container">
+            <h1>📈 Trading Strategy Results</h1>
+        <div class='stock-section'><h2>Stock: AAPL</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr class="comparison-row">
+                        <td>
+                            <span class="strategy-label">Prediction:</span> pred_2_3<br>
+                            <span class="strategy-label">L1:</span> <lambda><br>
+                            <span class="strategy-label">L2:</span> level2_threshold<br>
+                            <span class="strategy-label">L3:</span> level3_no_adjustment<br>
+                            <span class="strategy-label">L4:</span> level4_conservative
+                        </td>
+                        <td>$14.00</td>
+                        <td>5.87%</td>
+                        <td>2</td>
+                    </tr>
+                </table>
+                <p><strong>📊 Buy and Hold:</strong> Profit: $-25.18, % Profit: -10.55%</p>
+                <p><strong>🎯 Perfect Trading:</strong> Profit: $40.63, % Profit: 17.02%, Trades: 15</p>
+                <p><strong>📉 Trend-Following:</strong> Profit: $-17.35, Trades: 6, Win Rate: 16.67%</p>
+                <hr>
+                
+                <h3>📌 Cumulative for AAPL</h3>
+                <p><strong>Best Strategy:</strong> Prediction pred_3_2, L1: level1_simple_average, L2: level2_momentum, L3: level3_rsi, L4: level4_aggressive</p>
+                <p><strong>Cumulative Profit %:</strong> 4.76%</p>
+                <p><strong>Buy & Hold:</strong> Profit: $-25.18, % Profit: -10.55%</p></div><div class='stock-section'><h2>Stock: MSFT</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr class="comparison-row">
+                        <td>
+                            <span class="strategy-label">Prediction:</span> pred_3_2<br>
+                            <span class="strategy-label">L1:</span> level1_simple_average<br>
+                            <span class="strategy-label">L2:</span> level2_simple_comparison<br>
+                            <span class="strategy-label">L3:</span> level3_no_adjustment<br>
+                            <span class="strategy-label">L4:</span> level4_conservative
+                        </td>
+                        <td>$20.30</td>
+                        <td>4.85%</td>
+                        <td>4</td>
+                    </tr>
+                </table>
+                <p><strong>📊 Buy and Hold:</strong> Profit: $-30.21, % Profit: -7.21%</p>
+                <p><strong>🎯 Perfect Trading:</strong> Profit: $40.35, % Profit: 9.64%, Trades: 14</p>
+                <p><strong>📉 Trend-Following:</strong> Profit: $-9.39, Trades: 8, Win Rate: 62.50%</p>
+                <hr>
+                
+                <h3>📌 Cumulative for MSFT</h3>
+                <p><strong>Best Strategy:</strong> Prediction pred_3_2, L1: level1_simple_average, L2: level2_simple_comparison, L3: level3_no_adjustment, L4: level4_conservative</p>
+                <p><strong>Cumulative Profit %:</strong> 4.85%</p>
+                <p><strong>Buy & Hold:</strong> Profit: $-30.21, % Profit: -7.21%</p></div><div class='stock-section'><h2>Stock: NVDA</h2>
+                <h3>📌 Cumulative for NVDA</h3>
+                <p>No valid strategy results found.</p>
+                <p><strong>Buy & Hold:</strong> Profit: $0.00, % Profit: 0.00%</p></div>
+            <div class='stock-section'>
+                <h2>📌 Stock Inclusion Summary</h2>
+                <p><strong>✅ Strategy Beat Buy & Hold:</strong> AAPL, MSFT</p>
+                <p><strong>🚫 Strategy Underperformed (excluded):</strong> NVDA</p>
+                <p><strong>💼 Top 2 Stocks Used in Portfolio:</strong></p>
+                <ul>
+            <li><strong>MSFT</strong>: Prediction pred_3_2, L1: level1_simple_average, L2: level2_simple_comparison, L3: level3_no_adjustment, L4: level4_conservative</li><li><strong>AAPL</strong>: Prediction pred_3_2, L1: level1_simple_average, L2: level2_momentum, L3: level3_rsi, L4: level4_aggressive</li>
+                </ul>
+                <h3>📊 Portfolio Metrics</h3>
+                <p><strong>📈 Strategy:</strong> Profit: $31.65, % Profit: 4.81%, Accuracy: 71.43%</p>
+                <p><strong>📊 Buy & Hold:</strong> Profit: $-55.39, % Profit: -8.43%</p>
+                <p><strong>📉 Trend-Following:</strong> Profit: $-26.74, Trades: 14, Win Rate: 42.86%</p>
+            </div>
+            
+            <div class='stock-section'>
+                <h2>🧠 Unified Strategy Across Top Stocks</h2>
+                <p><strong>Strategy Used:</strong> Prediction pred_3_2, L1: level1_simple_average, L2: level2_simple_comparison, L3: level3_no_adjustment, L4: level4_conservative</p>
+                <p><strong>Total Initial:</strong> $657.44</p>
+                <p><strong>Total Profit:</strong> $20.30</p>
+                <p><strong>Profit %:</strong> 3.09%</p>
+                <p><strong>Total Trades:</strong> 4</p>
+                <p><strong>Accuracy:</strong> 75.00%</p>
+            </div>
+            
+        </div>
+        <script>
+        function sortTable(tableId, colIndex) {
+            var table = document.getElementById(tableId);
+            var rows = Array.from(table.rows).slice(1);
+            var dir = table.getAttribute("data-sort-dir") === "asc" ? 1 : -1;
+
+            rows.sort((a, b) => {
+                let valA = a.cells[colIndex].innerText;
+                let valB = b.cells[colIndex].innerText;
+                let numA = parseFloat(valA.replace(/[^0-9.-]+/g,""));
+                let numB = parseFloat(valB.replace(/[^0-9.-]+/g,""));
+                return dir * ((isNaN(numA) || isNaN(numB)) ? valA.localeCompare(valB) : numA - numB);
+            });
+
+            for (const row of rows) table.appendChild(row);
+            table.setAttribute("data-sort-dir", dir === 1 ? "desc" : "asc");
+        }
+
+        function searchTable(inputId, tableId) {
+            let input = document.getElementById(inputId).value.toLowerCase();
+            let rows = document.getElementById(tableId).rows;
+            for (let i = 1; i < rows.length; i++) {
+                let rowText = rows[i].innerText.toLowerCase();
+                rows[i].style.display = rowText.includes(input) ? "" : "none";
+            }
+        }
+        </script>
+        </body>
+        </html>
+        

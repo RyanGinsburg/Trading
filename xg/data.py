@@ -8,6 +8,8 @@ from sklearn.metrics import mean_squared_error #type: ignore
 import requests #type: ignore
 from datetime import datetime, timedelta
 from sklearn.preprocessing import MinMaxScaler #type: ignore
+from sklearn.ensemble import GradientBoostingClassifier  #type: ignore
+from sklearn.model_selection import TimeSeriesSplit #type: ignore
 from keras import Sequential   #type: ignore
 from keras.layers import LSTM, Dense, Dropout  # type: ignore
 from keras.callbacks import EarlyStopping  # type: ignore
@@ -31,12 +33,6 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 multiprocessing.set_start_method("spawn", force=True)
 pd.options.mode.chained_assignment = None  # Disable the warning globally
-
-# Directional Accuracy Score (DAS)
-def directional_accuracy(y_true, y_pred, current_price):
-    signs_true = np.sign(y_true - current_price)
-    signs_pred = np.sign(y_pred - current_price)
-    return np.mean(signs_true == signs_pred)
 
 # Define Optuna objective functions
 # -----------------------------
@@ -107,35 +103,11 @@ class OptimizationHistory:
             """, (stock, version, json.dumps(parameters)))
             conn.commit()
 
-def create_optimization_trial(previous_params):
-    def suggest_with_history(trial, param_name, suggest_type, *args):
-        if previous_params and param_name in previous_params:
-            prev_value = previous_params[param_name]
-            if suggest_type == 'int':
-                return trial.suggest_int(param_name, max(args[0], prev_value - 5), min(args[1], prev_value + 5))
-            elif suggest_type == 'float':
-                return trial.suggest_float(param_name, max(args[0], prev_value * 0.8), min(args[1], prev_value * 1.2))
-            elif suggest_type == 'loguniform':
-                return trial.suggest_loguniform(param_name, max(args[0], prev_value * 0.8), min(args[1], prev_value * 1.2))
-        else:
-            if suggest_type == 'int':
-                return trial.suggest_int(param_name, *args)
-            elif suggest_type == 'float':
-                return trial.suggest_float(param_name, *args)
-            elif suggest_type == 'loguniform':
-                return trial.suggest_loguniform(param_name, *args)
-    return suggest_with_history
-
-def directional_accuracy(y_true, y_pred, current_price):
-    signs_true = np.sign(y_true - current_price)
-    signs_pred = np.sign(y_pred - current_price)
-    return np.mean(signs_true == signs_pred)
-
 def dates():
     dates = [
-        datetime(2023, 2, 6),
-        datetime(2024, 1, 9),
-        datetime(2024, 5, 2),
+        datetime(2025, 2, 11),
+        #datetime(2024, 1, 9),
+        #datetime(2024, 5, 2),
     ]
     result_dates = []
     for start in dates:
@@ -152,6 +124,48 @@ def dates():
 def array_to_comma_separated_string(array: np.ndarray) -> str:
     flat_array = array.flatten()
     return ",".join(map(str, flat_array))
+
+def process_stocks(stock):
+    print("************************************************************************")
+    print(f'Starting to process predictions for {stock}')
+    print("************************************************************************")
+
+    full_data = fetch_stock_data(stock, start_date, future_date)
+    full_data_np = full_data.to_numpy()
+    full_data_columns = full_data.columns
+    full_data_index = full_data.index
+
+    shm = shared_memory.SharedMemory(create=True, size=full_data_np.nbytes)
+    np_full_data = np.ndarray(full_data_np.shape, dtype=full_data_np.dtype, buffer=shm.buf)
+    np_full_data[:] = full_data_np[:]
+
+    for dates_index, dates_ in enumerate(full_dates, start=1):
+        if stock == stock_start_point and dates_index<group:
+            continue
+        
+        print("********************************************************")
+        print(f'{stock} Processing date group {dates_index} for {stock}')
+        print("________________________________________________________")
+        table_date = dates_[0]
+        table_name = create_table_if_not_exists(stock, table_date, db_name)
+
+        if stock == stock_start_point:
+            dates_to_process = dates_[date:]
+        else:
+            dates_to_process = dates_
+
+        args_list = [(date, table_name, shm.name, full_data_np.shape, full_data_np.dtype, full_data_columns, full_data_index, stock, dates_index) for date in dates_to_process]
+
+        with multiprocessing.Pool(processes=processes_num) as pool:
+            pool.starmap(process_dates, args_list)
+
+    shm.close()
+    shm.unlink()
+
+    print(f'[11] Finished processing predictions for {stock}')
+    gc.collect()
+
+# === MODIFIED process_dates() with Walk-Forward Validation, 12 Prediction Methods, and Confidence Filtering ===
 
 def create_table_if_not_exists(stock, table_date, db_name):
     table_name = f"{stock}_{table_date.strftime('%Y_%m_%d')}"
@@ -175,6 +189,7 @@ def create_table_if_not_exists(stock, table_date, db_name):
         pred_5_2 TEXT,
         pred_6_1 TEXT,
         pred_6_2 TEXT,
+        class_pred TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """
@@ -184,74 +199,216 @@ def create_table_if_not_exists(stock, table_date, db_name):
         conn.commit()
     return table_name
 
+
 def insert_predictions(table_name, last_date, last_open, last_close, last_rsi, last_williams, last_adx, predictions, db_name):
     insert_sql = f"""
     INSERT OR REPLACE INTO {table_name} (
         date, open, close, rsi, williams, adx,
         pred_1_1, pred_1_2, pred_2_1, pred_2_2,
         pred_3_1, pred_3_2, pred_4_1, pred_4_2,
-        pred_5_1, pred_5_2, pred_6_1, pred_6_2
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        pred_5_1, pred_5_2, pred_6_1, pred_6_2,
+        class_pred
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
     with sqlite3.connect(db_name) as conn:
         cursor = conn.cursor()
         cursor.execute(insert_sql, (last_date, last_open, last_close, last_rsi, last_williams, last_adx, *predictions))
         conn.commit()
 
-def process_stocks(stock):
-    print("************************************************************************")
-    print(f'Starting to process predictions for {stock}')
-    print("************************************************************************")
-
-    full_data = fetch_stock_data(stock, start_date, future_date)
-    full_data_np = full_data.to_numpy()
-    full_data_columns = full_data.columns
-    full_data_index = full_data.index
-
-    shm = shared_memory.SharedMemory(create=True, size=full_data_np.nbytes)
-    np_full_data = np.ndarray(full_data_np.shape, dtype=full_data_np.dtype, buffer=shm.buf)
-    np_full_data[:] = full_data_np[:]
-
-    for dates_index, dates_ in enumerate(full_dates, start=1):
-        if stock == 'stock_name' and dates_index<3:
-            continue
-        
-        print("********************************************************")
-        print(f'{stock} Processing date group {dates_index} for {stock}')
-        print("________________________________________________________")
-        table_date = dates_[0]
-        table_name = create_table_if_not_exists(stock, table_date, db_name)
-
-        if stock== 'stock_name':
-            dates_to_process = dates_[16:]
-        else:
-            dates_to_process = dates_
-
-        args_list = [(date, table_name, shm.name, full_data_np.shape, full_data_np.dtype, full_data_columns, full_data_index, stock, dates_index) for date in dates_to_process]
-
-        with multiprocessing.Pool(processes=processes_num) as pool:
-            pool.starmap(process_dates, args_list)
-
-    shm.close()
-    shm.unlink()
-
-    print(f'[11] Finished processing predictions for {stock}')
-    gc.collect()
 
 def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stock, day):
     print("________________________________________________________")
     print(f'[1] {stock} Processing day {day} for date {date}')
     print("________________________________________________________")
 
-    RESET = (day-1) % 5 == 0  # Assuming day is defined earlier
-
+    RESET = (day-1) % 5 == 0
     existing_shm = shared_memory.SharedMemory(name=shm_name)
     np_full_data = np.ndarray(shape, dtype=dtype, buffer=existing_shm.buf)
     full_data = pd.DataFrame(np_full_data, columns=columns, index=index)
 
-    features = ['close', 'volume', 'ema', 'sma', 'williams', 'rsi', 'adx']
-    df = full_data.loc[start_date:date]
+    df = full_data.loc[start_date:date].copy()
+
+    # Add lagged features
+    df['close_lag1'] = df['close'].shift(1)
+    df['volume_lag1'] = df['volume'].shift(1)
+    df['rsi_lag1'] = df['rsi'].shift(1)
+    df['adx_lag1'] = df['adx'].shift(1)
+
+    features = ['close', 'volume', 'ema', 'sma', 'williams', 'rsi', 'adx',
+                'close_lag1', 'volume_lag1', 'rsi_lag1', 'adx_lag1']
+
+    for i in range(1, forecast_horizon + 1):
+        df[f'Close_T+{i}'] = df['close'].shift(-i)
+
+    df['Close_T+1'] = df['close'].shift(-1)
+    df.dropna(inplace=True)
+
+    y_class = (df['Close_T+1'] > df['close']).astype(int)
+
+    scaler = StandardScaler()
+    X = df[features]
+    X_scaled = scaler.fit_transform(X)
+    y = df[[f'Close_T+{i}' for i in range(1, forecast_horizon + 1)]]
+    y_class_full = y_class
+
+    split_index = int(0.8 * len(df))
+    X_train, X_test = X_scaled[:split_index], X_scaled[split_index:]
+    y_train, y_test = y[:split_index], y[split_index:]
+    y_train_class = y_class_full[:split_index]
+    y_test_class = y_class_full[split_index:]
+
     trial_num = 5 if testing else (150 if RESET else 50)
+
+    # Directional Accuracy Score (DAS)
+    def directional_accuracy(y_true, y_pred, current_price):
+        signs_true = np.sign(y_true - current_price)
+        signs_pred = np.sign(y_pred - current_price)
+        return np.mean(signs_true == signs_pred)
+
+    # Profit Score
+    def profit_score(y_pred, open_prices):
+        return np.sum((y_pred - open_prices)[(y_pred - open_prices) > 0])
+
+    # Create history-aware trial suggestions
+    def create_optimization_trial(previous_params):
+        def suggest_with_history(trial, param_name, suggest_type, *args):
+            if previous_params and param_name in previous_params:
+                prev_value = previous_params[param_name]
+                if suggest_type == 'int':
+                    return trial.suggest_int(param_name, max(args[0], prev_value - 5), min(args[1], prev_value + 5))
+                elif suggest_type == 'float':
+                    return trial.suggest_float(param_name, max(args[0], prev_value * 0.8), min(args[1], prev_value * 1.2))
+                elif suggest_type == 'loguniform':
+                    return trial.suggest_loguniform(param_name, max(args[0], prev_value * 0.8), min(args[1], prev_value * 1.2))
+            else:
+                if suggest_type == 'int':
+                    return trial.suggest_int(param_name, *args)
+                elif suggest_type == 'float':
+                    return trial.suggest_float(param_name, *args)
+                elif suggest_type == 'loguniform':
+                    return trial.suggest_loguniform(param_name, *args)
+        return suggest_with_history
+
+    # Define a generic Optuna objective function supporting multiple loss types and parameter memory
+    def optuna_objective(model_class, loss_type, X_train, y_train, df, suggest_with_history, stock, version, opt_history):
+        def objective(trial):
+            if model_class.__name__ == 'XGBRegressor':
+                params = {
+                    'n_estimators': suggest_with_history(trial, 'n_estimators', 'int', 50, 300),
+                    'max_depth': suggest_with_history(trial, 'max_depth', 'int', 3, 10),
+                    'learning_rate': suggest_with_history(trial, 'learning_rate', 'float', 0.01, 0.3),
+                    'subsample': suggest_with_history(trial, 'subsample', 'float', 0.6, 1.0),
+                    'colsample_bytree': suggest_with_history(trial, 'colsample_bytree', 'float', 0.6, 1.0),
+                }
+            else:
+                params = {
+                    'n_estimators': suggest_with_history(trial, 'n_estimators', 'int', 50, 300),
+                    'max_depth': suggest_with_history(trial, 'max_depth', 'int', 3, 10),
+                    'min_samples_split': suggest_with_history(trial, 'min_samples_split', 'int', 2, 10),
+                    'min_samples_leaf': suggest_with_history(trial, 'min_samples_leaf', 'int', 1, 10),
+                }
+
+            model = model_class(**params)
+            tscv = TimeSeriesSplit(n_splits=3)
+            scores = []
+
+            for train_idx, val_idx in tscv.split(X_train):
+                if len(train_idx) == 0 or len(val_idx) == 0:
+                    continue
+
+                model.fit(X_train[train_idx], y_train.iloc[train_idx])
+                y_pred = model.predict(X_train[val_idx])
+
+                if y_pred.ndim == 1:
+                    y_pred = y_pred.reshape(-1, 1)
+
+                if len(y_pred) == 0:
+                    continue
+
+                if loss_type == 'das':
+                    close_slice = df['close'].iloc[train_idx[-1]:train_idx[-1] + len(val_idx)]
+                    if len(close_slice) != len(y_pred):
+                        continue
+                    score = directional_accuracy(y_train.iloc[val_idx, 0].values, y_pred[:, 0], close_slice.values)
+                    scores.append(1 - score)
+
+                elif loss_type == 'profit':
+                    open_prices = df['open'].iloc[train_idx[-1]:train_idx[-1] + len(val_idx)].values
+                    if len(open_prices) != len(y_pred):
+                        continue
+                    scores.append(-profit_score(y_pred[:, 0], open_prices))
+
+                elif loss_type == 'hybrid':
+                    close_slice = df['close'].iloc[train_idx[-1]:train_idx[-1] + len(val_idx)]
+                    open_prices = df['open'].iloc[train_idx[-1]:train_idx[-1] + len(val_idx)].values
+                    if len(close_slice) != len(y_pred) or len(open_prices) != len(y_pred):
+                        continue
+                    das_score = directional_accuracy(y_train.iloc[val_idx, 0].values, y_pred[:, 0], close_slice.values)
+                    profit = profit_score(y_pred[:, 0], open_prices)
+                    hybrid_score = 0.5 * (1 - das_score) + 0.5 * (-profit)
+                    scores.append(hybrid_score)
+
+            if not scores:
+                return float("inf")
+
+            # Save the best parameters to optimization history
+            opt_history.store_parameters(stock, version, params)
+
+            return np.mean(scores)
+
+        return objective
+
+    # Forecast function that returns a flat list of predictions
+    def rolling_forecast(model, latest_data):
+        preds = model.predict(latest_data.reshape(1, -1))[0]
+        return str(np.round(preds, 4).tolist())
+
+    
+    def build_model(model_class, loss_type, stock, version):
+        previous_params = opt_history.get_parameters(stock, version)
+        suggest_with_history = create_optimization_trial(previous_params)
+
+        study = optuna.create_study(direction='minimize')
+        study.optimize(
+            optuna_objective(
+                model_class, loss_type, X_train, y_train, df,
+                suggest_with_history, stock, version, opt_history
+            ),
+            n_trials=trial_num
+        )
+        best_model = model_class(**study.best_params)
+        best_model.fit(X_train, y_train)
+        return best_model
+
+
+    models = {
+        "pred_1_1": build_model(RandomForestRegressor, 'profit', stock, "pred_1_1"),
+        "pred_1_2": build_model(RandomForestRegressor, 'profit', stock, "pred_1_2"),
+        "pred_2_1": build_model(RandomForestRegressor, 'das', stock, "pred_2_1"),
+        "pred_2_2": build_model(RandomForestRegressor, 'das', stock, "pred_2_2"),
+        "pred_3_1": build_model(xgb.XGBRegressor, 'profit', stock, "pred_3_1"),
+        "pred_3_2": build_model(xgb.XGBRegressor, 'profit', stock, "pred_3_2"),
+        "pred_4_1": build_model(xgb.XGBRegressor, 'das', stock, "pred_4_1"),
+        "pred_4_2": build_model(xgb.XGBRegressor, 'das', stock, "pred_4_2"),
+        "pred_5_1": build_model(RandomForestRegressor, 'hybrid', stock, "pred_5_1"),
+        "pred_5_2": build_model(RandomForestRegressor, 'hybrid', stock, "pred_5_2"),
+        "pred_6_1": build_model(xgb.XGBRegressor, 'hybrid', stock, "pred_6_1"),
+        "pred_6_2": build_model(xgb.XGBRegressor, 'hybrid', stock, "pred_6_2"),
+    }
+
+
+    latest_data = X_test[-1]
+    # Forecast function that returns a flat list of predictions
+    def rolling_forecast(model, latest_data):
+        preds = model.predict(latest_data.reshape(1, -1))[0]
+        return str(np.round(preds, 4).tolist())
+
+    predictions = [rolling_forecast(model, latest_data) for model in models.values()]
+
+
+    clf = GradientBoostingClassifier()
+    clf.fit(X_train, y_train_class)
+    class_pred = clf.predict_proba(latest_data.reshape(1, -1))[0][1]
 
     last_row = df.iloc[-1]
     last_date = last_row.name.date()
@@ -261,180 +418,10 @@ def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stoc
     last_williams = last_row['williams']
     last_adx = last_row['adx']
 
-    # Create shifted columns for multi-step forecasting
-    for i in range(1, forecast_horizon + 1):
-        df[f'Close_T+{i}'] = df['close'].shift(-i)
+    predictions.append(str(round(class_pred, 4)))
+    insert_predictions(table_name, last_date, last_open, last_close, last_rsi, last_williams, last_adx, predictions, db_name)
 
-    df.dropna(inplace=True)
-
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(
-        df[features], df[[f'Close_T+{i}' for i in range(1, forecast_horizon + 1)]],
-        test_size=0.2, shuffle=False
-    )
-
-    # Normalize features
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-
-    # Directional Accuracy Score (DAS)
-    def directional_accuracy(y_true, y_pred, current_price):
-        signs_true = np.sign(y_true - current_price)
-        signs_pred = np.sign(y_pred - current_price)
-        return np.mean(signs_true == signs_pred)
-
-    # Define Optuna objective functions
-    def objective(trial, model_type, loss_type, stock, version, opt_history):
-        previous_params = opt_history.get_parameters(stock, version)
-        suggest_with_history = create_optimization_trial(previous_params)
-
-        params = {
-            'n_estimators': suggest_with_history(trial, 'n_estimators', 'int', 50, 300),
-            'max_depth': suggest_with_history(trial, 'max_depth', 'int', 3, 10),
-        }
-
-        if model_type == "xgb":
-            params['learning_rate'] = suggest_with_history(trial, 'learning_rate', 'float', 0.01, 0.3)
-            model = xgb.XGBRegressor(**params)
-        elif model_type == "rf":
-            params['min_samples_split'] = suggest_with_history(trial, 'min_samples_split', 'int', 2, 10)
-            params['min_samples_leaf'] = suggest_with_history(trial, 'min_samples_leaf', 'int', 1, 10)
-            model = RandomForestRegressor(**params, random_state=42)
-
-        model.fit(X_train_scaled, y_train)
-        y_pred = model.predict(X_test_scaled)
-
-        mse = mean_squared_error(y_test, y_pred)
-        das = directional_accuracy(y_test.iloc[:, 0].values, y_pred[:, 0], df['close'].iloc[-len(y_test):].values)
-
-        loss = mse if loss_type == "mse" else (1 - das if loss_type == "das" else mse + (5 * (1 - das)))
-
-        opt_history.store_parameters(stock, version, params)
-        print("**************************************")
-        print(version)
-        print("**************************************")
-
-        return loss
-
-
-    # Retrieve previous best parameters for each model (if they exist)
-    prev_xgb_mse = opt_history.get_parameters(stock, "xgb_mse") or {}
-    prev_xgb_das = opt_history.get_parameters(stock, "xgb_das") or {}
-    prev_xgb_mse_das = opt_history.get_parameters(stock, "xgb_mse_das") or {}
-    prev_rf_mse = opt_history.get_parameters(stock, "rf_mse") or {}
-    prev_rf_das = opt_history.get_parameters(stock, "rf_das") or {}
-    prev_rf_mse_das = opt_history.get_parameters(stock, "rf_mse_das") or {}
-
-    # Debugging: Confirm that version is a string and not a dictionary
-    print(f"Retrieving parameters for stock={stock}, version=xgb_mse -> {prev_xgb_mse}")
-    print(f"Retrieving parameters for stock={stock}, version=rf_mse -> {prev_rf_mse}")
-
-    # Run Optuna trials with correct version names
-    study_xgb_mse = optuna.create_study(direction='minimize')
-    study_xgb_mse.optimize(lambda trial: objective(trial, "xgb", "mse", stock, "xgb_mse", opt_history), n_trials=trial_num)
-
-    study_xgb_das = optuna.create_study(direction='minimize')
-    study_xgb_das.optimize(lambda trial: objective(trial, "xgb", "das", stock, "xgb_das", opt_history), n_trials=trial_num)
-
-    study_xgb_mse_das = optuna.create_study(direction='minimize')
-    study_xgb_mse_das.optimize(lambda trial: objective(trial, "xgb", "mse_das", stock, "xgb_mse_das", opt_history), n_trials=trial_num)
-
-    study_rf_mse = optuna.create_study(direction='minimize')
-    study_rf_mse.optimize(lambda trial: objective(trial, "rf", "mse", stock, "rf_mse", opt_history), n_trials=trial_num)
-
-    study_rf_das = optuna.create_study(direction='minimize')
-    study_rf_das.optimize(lambda trial: objective(trial, "rf", "das", stock, "rf_das", opt_history), n_trials=trial_num)
-
-    study_rf_mse_das = optuna.create_study(direction='minimize')
-    study_rf_mse_das.optimize(lambda trial: objective(trial, "rf", "mse_das", stock, "rf_mse_das", opt_history), n_trials=trial_num)
-
-    # Store only if the new parameters are better
-    def update_best_params(model_name, study, prev_best):
-        new_best = study.best_params
-        if not prev_best or study.best_value < prev_best.get("best_value", float("inf")):
-            new_best["best_value"] = study.best_value  # Store best loss value for comparison
-            opt_history.store_parameters(stock, model_name, new_best)
-            print(f"Updated best parameters for {model_name}: {new_best}")  # Debugging statement
-
-    # Update storage with the best parameters so far
-    update_best_params("xgb_mse", study_xgb_mse, prev_xgb_mse)
-    update_best_params("xgb_das", study_xgb_das, prev_xgb_das)
-    update_best_params("xgb_mse_das", study_xgb_mse_das, prev_xgb_mse_das)
-    update_best_params("rf_mse", study_rf_mse, prev_rf_mse)
-    update_best_params("rf_das", study_rf_das, prev_rf_das)
-    update_best_params("rf_mse_das", study_rf_mse_das, prev_rf_mse_das)
-
-
-
-
-
-
-
-
-
-    # Train final models
-    models = {
-        "xgb_mse": xgb.XGBRegressor(**study_xgb_mse.best_params),
-        "xgb_das": xgb.XGBRegressor(**study_xgb_das.best_params),
-        "xgb_mse_das": xgb.XGBRegressor(**study_xgb_mse_das.best_params),
-        "rf_mse": RandomForestRegressor(**study_rf_mse.best_params),
-        "rf_das": RandomForestRegressor(**study_rf_das.best_params),
-        "rf_mse_das": RandomForestRegressor(**study_rf_mse_das.best_params)
-    }
-
-    for model in models.values():
-        model.fit(X_train_scaled, y_train)
-
-    # Rolling Forecast Function
-    def rolling_forecast(model, initial_data, num_days):
-        rolling_features = initial_data.copy()
-        predictions = []
-        
-        for _ in range(num_days):
-            pred = np.ravel(model.predict(rolling_features.reshape(1, -1)))[0]  
-            predictions.append(pred)
-            rolling_features[:-1] = rolling_features[1:]  
-            rolling_features[-1] = pred  
-        
-        return predictions
-
-    # Generate predictions
-    latest_data = X_test_scaled[-1]
-
-    predictions = {}
-    for key, model in models.items():
-        predictions[f"{key}_direct"] = model.predict(latest_data.reshape(1, -1))[0]
-        predictions[f"{key}_rolling"] = rolling_forecast(model, latest_data, forecast_horizon)
-
-    arrays = [np.array(pred) for pred in predictions.values()]
-
-    day_num = 0
-    for i in range(0, 12, 2):
-        # Ensure we don't exceed the length of arrays
-        if i + 1 < len(arrays):
-            future_prices_method_1, future_prices_method_2 = arrays[i:i+2]
-        else:
-            break  # Prevent index errors if fewer than expected arrays exist
-
-        # Store predictions in the dictionary correctly
-        predictions[f"future_prices_{i+1}"] = array_to_comma_separated_string(future_prices_method_1)
-        predictions[f"future_prices_{i+2}"] = array_to_comma_separated_string(future_prices_method_2)
-
-        filtered_predictions = [value for key, value in predictions.items() if key.startswith("future_prices_")]
-
-        # Ensure exactly 12 values
-        filtered_predictions = filtered_predictions[:12]
-
-        print("________________________________________________________")
-        day_num += 1
-        print(f'[2] {stock} Generated predictions for version {day_num}')
-        print(f"Expected 12 predictions, got {len(filtered_predictions)}")
-        print("________________________________________________________")
-
-    # Insert into database
-    insert_predictions(table_name, last_date, last_open, last_close, last_rsi, last_williams, last_adx, filtered_predictions, db_name)
-    existing_shm.close()  # Explicitly close shared memory in the worker process
+    existing_shm.close()
     existing_shm.unlink()
     gc.collect()
 
@@ -445,8 +432,8 @@ testing = False
 processes_num = 16
 
 if testing:
-    forecast_horizon = 2  # Predict next 7 days
-    future_days = 1
+    forecast_horizon = 2 # Predict next 7 days
+    future_days = 2
     stocks = ['AAPL']
 else:
     forecast_horizon = 8  # Predict next 7 days
@@ -461,6 +448,9 @@ else:
         'NFLX', 'DIS', 'CMCSA',                                    # communication services
         'KO', 'PEP'                                              # consumer staples
     ]
+    stock_start_point = 'none'
+    group = 2
+    date = 16
     
     if part == 1:
         stocks = stocks[:12]
@@ -486,5 +476,12 @@ start_date = future_date - timedelta(days=3000)
 full_dates = dates()
 
 if __name__ == "__main__":
-    for stock in stocks:
-        process_stocks(stock)
+    if stock_start_point in stocks:
+        # Find the index of the target and process from that point on
+        start_index = stocks.index(stock_start_point)
+        for stock in stocks[start_index:]:
+            process_stocks(stock)
+    else:
+        for stock in stocks:
+            process_stocks(stock)
+
