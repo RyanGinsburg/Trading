@@ -2,7 +2,7 @@ import json
 
 # Configurable
 json_path = "json/trading_database_export.json"
-expected_groups = 3
+expected_groups = 1
 expected_days_per_group = 31
 stocks = [
     'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMD', 'ORCL',

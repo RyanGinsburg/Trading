@@ -66,6 +66,19 @@ def fetch_stock_data(stock, start_date, end_date, technical_indicators=['ema', '
     combined_df = pd.concat(df_list, axis=1)
     return combined_df.loc[pd.to_datetime(start_date):pd.to_datetime(end_date)]
 
+def get_missing_market_days(stock):
+    if stock in last_known_dates and last_known_dates[stock]:
+        last_date = datetime.strptime(last_known_dates[stock], "%Y-%m-%d").date()
+    else:
+        # If no data exists, take last N market days
+        today = datetime.now().date()
+        past_days = [d.date() for d in market_days if d.date() <= today]
+        return past_days[-20:]  # Return the most recent 20 market days
+
+    today = datetime.now().date()
+    return [d.date() for d in market_days if last_date < d.date() <= today]
+
+
 class OptimizationHistory:
     def __init__(self, db_name='optimization_history.db'):
         self.db_name = db_name
@@ -124,6 +137,32 @@ def dates():
 def array_to_comma_separated_string(array: np.ndarray) -> str:
     flat_array = array.flatten()
     return ",".join(map(str, flat_array))
+
+def process_single_market_day(stock: str, market_date: datetime):
+    print(f"\n📈 Processing {stock} for {market_date.strftime('%Y-%m-%d')}")
+    
+    # Fetch full data up to the date
+    full_data = fetch_stock_data(stock, start_date, market_date)
+    if full_data.empty or market_date not in full_data.index:
+        print(f"⚠️ No data for {stock} on {market_date}")
+        return
+
+    full_data_np = full_data.to_numpy()
+    full_data_columns = full_data.columns
+    full_data_index = full_data.index
+
+    shm = shared_memory.SharedMemory(create=True, size=full_data_np.nbytes)
+    np_full_data = np.ndarray(full_data_np.shape, dtype=full_data_np.dtype, buffer=shm.buf)
+    np_full_data[:] = full_data_np[:]
+
+    table_name = create_table_if_not_exists(stock, market_date, db_name)
+
+    args = (market_date, table_name, shm.name, full_data_np.shape, full_data_np.dtype, full_data_columns, full_data_index, stock, 1)
+    process_dates(*args)
+
+    shm.close()
+    shm.unlink()
+    print(f"✅ Finished {stock} for {market_date.strftime('%Y-%m-%d')}")
 
 def process_stocks(stock):
     print("************************************************************************")
@@ -429,7 +468,7 @@ def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stoc
 # Global Variables
 # -----------------------------
 testing = False
-processes_num = 16
+processes_num = 10
 
 if testing:
     forecast_horizon = 2 # Predict next 7 days
@@ -438,7 +477,7 @@ if testing:
 else:
     forecast_horizon = 8  # Predict next 7 days
     part = 1
-    future_days = 30
+    future_days = 19
     stocks = [
         'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'AMD', 'ORCL',  # technology
         'UNH', 'LLY', 'JNJ', 'MRK', 'ABBV', 'ABT', 'AMGN',         # healthcare
@@ -448,9 +487,9 @@ else:
         'NFLX', 'DIS', 'CMCSA',                                    # communication services
         'KO', 'PEP'                                              # consumer staples
     ]
-    stock_start_point = 'none'
-    group = 2
-    date = 16
+    stock_start_point = 'NVDA'
+    group = 1
+    date = 28
     
     if part == 1:
         stocks = stocks[:12]
@@ -475,13 +514,43 @@ future_date = datetime.now()
 start_date = future_date - timedelta(days=3000)
 full_dates = dates()
 
-if __name__ == "__main__":
-    if stock_start_point in stocks:
-        # Find the index of the target and process from that point on
-        start_index = stocks.index(stock_start_point)
-        for stock in stocks[start_index:]:
-            process_stocks(stock)
-    else:
-        for stock in stocks:
-            process_stocks(stock)
+realtime = True
+last_known_dates = {
+    "AAPL": "2025-03-14",
+    "MSFT": "2025-03-14",
+    "NVDA": "2025-03-14",
+    "GOOGL": "2025-03-13",
+    "META": "2025-03-14",
+}
+    # "TSLA": None,   # 🚨 New stock, no data yet
 
+if __name__ == "__main__":
+    if realtime:
+        from multiprocessing import Pool
+
+        tasks = []
+        for stock in list(last_known_dates.keys()):
+            missing_days = get_missing_market_days(stock)
+            if not missing_days:
+                print(f"{stock}: ✅ Already up to date.")
+                continue
+
+            for date in missing_days:
+                tasks.append((stock, date))
+
+        print(f"⏱️ Starting multiprocessing with {processes_num} workers for {len(tasks)} tasks...\n")
+
+        with Pool(processes=processes_num) as pool:
+            pool.starmap(process_single_market_day, tasks)
+
+        print("✅ Finished processing all missing market days.")
+
+    else:
+        if stock_start_point in stocks:
+            # Find the index of the target and process from that point on
+            start_index = stocks.index(stock_start_point)
+            for stock in stocks[start_index:]:
+                process_stocks(stock)
+        else:
+            for stock in stocks:
+                process_stocks(stock)
