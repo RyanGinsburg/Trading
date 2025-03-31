@@ -1,0 +1,273 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Trading Strategy Results</title>
+            
+    <style>
+      body {
+        font-family: 'Segoe UI', sans-serif;
+        background: #f9fbfd;
+        color: #333;
+        margin: 0;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1000px;
+        margin: auto;
+      }
+      .stock-section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        margin-bottom: 30px;
+      }
+      .stock-section h2 {
+        margin-top: 0;
+        color: #2c3e50;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th, td {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: center;
+      }
+      th {
+        background-color: #eef3f7;
+        color: #2c3e50;
+      }
+      .strategy-label {
+        font-weight: bold;
+        color: #34495e;
+      }
+      .comparison-row {
+        background-color: #fefefe;
+      }
+    </style>
+    
+            <style>
+            .search-box {
+                margin: 10px 0;
+                padding: 5px;
+                width: 250px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+            }
+            th {
+                background-color: #f2f2f2;
+                cursor: pointer;
+                padding: 10px;
+            }
+            td {
+                padding: 8px;
+                text-align: center;
+            }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .stock-section {
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 20px;
+                border: 1px solid #ccc;
+                border-radius: 12px;
+                background-color: #fff;
+                margin-bottom: 40px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            }
+            </style>
+        </head>
+        <body>
+        <div class="container">
+            <h1>📈 Trading Strategy Results</h1>
+        <div class='stock-section'><h2>Stock: AAPL</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr class="comparison-row">
+                        <td>
+                            <span class="strategy-label">Prediction:</span> pred_5_3<br>
+                            <span class="strategy-label">L1:</span> level1_confidence_blend <span style='color:gray'>(Errors: pred1=39.5958, pred2=39.5021)</span><br>
+                            <span class="strategy-label">L2:</span> level2_momentum<br> 
+                            <span class="strategy-label">L3:</span> level3_rsi<br>
+                            <span class="strategy-label">L4:</span> level4_aggressive
+                        </td>
+                        <td>$9.44</td>
+                        <td>3.90%</td>
+                        <td>1</td>
+                    </tr>
+                </table>
+                <p><strong>📊 Buy and Hold:</strong> Profit: $-23.89, % Profit: -9.88%</p>
+                <p><strong>🎯 Perfect Trading:</strong> Profit: $16.53, % Profit: 6.84%, Trades: 8</p>
+                <p><strong>📉 Trend-Following:</strong> Profit: $-14.98, Trades: 4, Win Rate: 50.00%</p>
+                <hr>
+                
+                <h3>📌 Cumulative for AAPL</h3>
+                <p><strong>Best Strategy:</strong> Prediction pred_5_3, L1: level1_confidence_blend <span style='color:gray'>(Errors: pred1=39.5958, pred2=39.5021)</span>, L2: level2_momentum, L3: level3_rsi, L4: level4_aggressive</p>
+                <p><strong>Cumulative Profit %:</strong> 3.90%</p>
+                <p><strong>Buy & Hold:</strong> Profit: $-23.89, % Profit: -9.88%</p></div><div class='stock-section'><h2>Stock: GOOGL</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr class="comparison-row">
+                        <td>
+                            <span class="strategy-label">Prediction:</span> pred_1_3<br>
+                            <span class="strategy-label">L1:</span> level1_error_adjusted <span style='color:gray'>(Bias Error: 25.7221)</span><br>
+                            <span class="strategy-label">L2:</span> level2_simple_comparison<br> 
+                            <span class="strategy-label">L3:</span> level3_no_adjustment<br>
+                            <span class="strategy-label">L4:</span> level4_conservative
+                        </td>
+                        <td>$8.37</td>
+                        <td>4.87%</td>
+                        <td>3</td>
+                    </tr>
+                </table>
+                <p><strong>📊 Buy and Hold:</strong> Profit: $-17.60, % Profit: -10.24%</p>
+                <p><strong>🎯 Perfect Trading:</strong> Profit: $16.24, % Profit: 9.45%, Trades: 8</p>
+                <p><strong>📉 Trend-Following:</strong> Profit: $-18.80, Trades: 4, Win Rate: 0.00%</p>
+                <hr>
+                
+                <h3>📌 Cumulative for GOOGL</h3>
+                <p><strong>Best Strategy:</strong> Prediction pred_1_3, L1: level1_error_adjusted <span style='color:gray'>(Bias Error: 25.7221)</span>, L2: level2_simple_comparison, L3: level3_no_adjustment, L4: level4_conservative</p>
+                <p><strong>Cumulative Profit %:</strong> 4.87%</p>
+                <p><strong>Buy & Hold:</strong> Profit: $-17.60, % Profit: -10.24%</p></div><div class='stock-section'><h2>Stock: META</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr class="comparison-row">
+                        <td>
+                            <span class="strategy-label">Prediction:</span> pred_4_2<br>
+                            <span class="strategy-label">L1:</span> level1_raw<br>
+                            <span class="strategy-label">L2:</span> level2_trend_analysis<br> 
+                            <span class="strategy-label">L3:</span> level3_rsi<br>
+                            <span class="strategy-label">L4:</span> level4_aggressive
+                        </td>
+                        <td>$26.36</td>
+                        <td>4.00%</td>
+                        <td>3</td>
+                    </tr>
+                </table>
+                <p><strong>📊 Buy and Hold:</strong> Profit: $-82.91, % Profit: -12.57%</p>
+                <p><strong>🎯 Perfect Trading:</strong> Profit: $101.62, % Profit: 15.41%, Trades: 7</p>
+                <p><strong>📉 Trend-Following:</strong> Profit: $-26.55, Trades: 5, Win Rate: 20.00%</p>
+                <hr>
+                
+                <h3>📌 Cumulative for META</h3>
+                <p><strong>Best Strategy:</strong> Prediction pred_4_2, L1: level1_raw, L2: level2_trend_analysis, L3: level3_rsi, L4: level4_aggressive</p>
+                <p><strong>Cumulative Profit %:</strong> 4.00%</p>
+                <p><strong>Buy & Hold:</strong> Profit: $-82.91, % Profit: -12.57%</p></div><div class='stock-section'><h2>Stock: MSFT</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr class="comparison-row">
+                        <td>
+                            <span class="strategy-label">Prediction:</span> pred_3_2<br>
+                            <span class="strategy-label">L1:</span> level1_raw<br>
+                            <span class="strategy-label">L2:</span> level2_threshold<br> 
+                            <span class="strategy-label">L3:</span> level3_rsi<br>
+                            <span class="strategy-label">L4:</span> level4_aggressive
+                        </td>
+                        <td>$32.42</td>
+                        <td>8.13%</td>
+                        <td>5</td>
+                    </tr>
+                </table>
+                <p><strong>📊 Buy and Hold:</strong> Profit: $-20.02, % Profit: -5.02%</p>
+                <p><strong>🎯 Perfect Trading:</strong> Profit: $35.80, % Profit: 8.98%, Trades: 9</p>
+                <p><strong>📉 Trend-Following:</strong> Profit: $4.98, Trades: 6, Win Rate: 50.00%</p>
+                <hr>
+                
+                <h3>📌 Cumulative for MSFT</h3>
+                <p><strong>Best Strategy:</strong> Prediction pred_3_2, L1: level1_raw, L2: level2_threshold, L3: level3_rsi, L4: level4_aggressive</p>
+                <p><strong>Cumulative Profit %:</strong> 8.13%</p>
+                <p><strong>Buy & Hold:</strong> Profit: $-20.02, % Profit: -5.02%</p></div><div class='stock-section'><h2>Stock: NVDA</h2>
+                <h3>Group 1</h3>
+                <table>
+                    <tr>
+                        <th>Best Strategy</th>
+                        <th>Profit ($)</th>
+                        <th>% Profit</th>
+                        <th>Total Trades</th>
+                    </tr>
+                    <tr class="comparison-row">
+                        <td>
+                            <span class="strategy-label">Prediction:</span> pred_1_3<br>
+                            <span class="strategy-label">L1:</span> level1_error_adjusted <span style='color:gray'>(Bias Error: 30.0303)</span><br>
+                            <span class="strategy-label">L2:</span> level2_volatility_based<br> 
+                            <span class="strategy-label">L3:</span> level3_no_adjustment<br>
+                            <span class="strategy-label">L4:</span> level4_conservative
+                        </td>
+                        <td>$14.77</td>
+                        <td>11.96%</td>
+                        <td>3</td>
+                    </tr>
+                </table>
+                <p><strong>📊 Buy and Hold:</strong> Profit: $-13.84, % Profit: -11.21%</p>
+                <p><strong>🎯 Perfect Trading:</strong> Profit: $26.82, % Profit: 21.71%, Trades: 9</p>
+                <p><strong>📉 Trend-Following:</strong> Profit: $-10.57, Trades: 3, Win Rate: 33.33%</p>
+                <hr>
+                
+                <h3>📌 Cumulative for NVDA</h3>
+                <p><strong>Best Strategy:</strong> Prediction pred_1_3, L1: level1_error_adjusted <span style='color:gray'>(Bias Error: 30.0303)</span>, L2: level2_volatility_based, L3: level3_no_adjustment, L4: level4_conservative</p>
+                <p><strong>Cumulative Profit %:</strong> 11.96%</p>
+                <p><strong>Buy & Hold:</strong> Profit: $-13.84, % Profit: -11.21%</p></div>
+            <div class='stock-section'>
+            <h2>📌 Stock Inclusion Summary</h2>
+            <p><strong>✅ Strategy Beat Buy & Hold:</strong> AAPL, GOOGL, META, MSFT, NVDA</p>
+            <p><strong>🚫 Strategy Underperformed (excluded):</strong> </p>
+            <p><strong>💼 Top 5 Stocks Used in Portfolio:</strong></p>
+            <ul>
+            <li><strong>NVDA</strong>: Prediction pred_1_3, L1: level1_error_adjusted <span style='color:gray'>(Bias Error: 30.0303)</span>, L2: level2_volatility_based, L3: level3_no_adjustment, L4: level4_conservative</li><li><strong>MSFT</strong>: Prediction pred_3_2, L1: level1_raw, L2: level2_threshold, L3: level3_rsi, L4: level4_aggressive</li><li><strong>GOOGL</strong>: Prediction pred_1_3, L1: level1_error_adjusted <span style='color:gray'>(Bias Error: 25.7221)</span>, L2: level2_simple_comparison, L3: level3_no_adjustment, L4: level4_conservative</li><li><strong>META</strong>: Prediction pred_4_2, L1: level1_raw, L2: level2_trend_analysis, L3: level3_rsi, L4: level4_aggressive</li><li><strong>AAPL</strong>: Prediction pred_5_3, L1: level1_confidence_blend <span style='color:gray'>(Errors: pred1=39.5958, pred2=39.5021)</span>, L2: level2_momentum, L3: level3_rsi, L4: level4_aggressive</li></ul>
+            <h3>📊 Portfolio Metrics</h3>
+            <p><strong>📈 Strategy:</strong> Profit: $736.58, % Profit: 5.98%, Accuracy: 71.81%</p>
+            <p><strong>📊 Buy & Hold:</strong> Profit: $-158.26, % Profit: -9.92%</p>
+            <p><strong>📉 Trend-Following:</strong> Profit: $-65.92, Trades: 22, Win Rate: 31.82%</p>
+            </div>
+            
+                <div class='stock-section'>
+                <h4>📍 Final Strategy-Based Signal</h4>
+                <table>
+                    <tr><th>Stock</th><th>Decision</th></tr>
+                <tr><td>AAPL</td><td>Sell</td></tr><tr><td>GOOGL</td><td>Buy</td></tr><tr><td>META</td><td>Buy</td></tr><tr><td>MSFT</td><td>Sell</td></tr><tr><td>NVDA</td><td>Buy</td></tr>
+                </table>
+                </div>
+                
+            <div class='stock-section'>
+            <h2>🧠 Unified Strategy Across Top Stocks</h2>
+            <p><strong>Strategy Used:</strong> Prediction pred_3_2, L1: level1_raw, L2: level2_threshold, L3: level3_rsi, L4: level4_aggressive</p>
+            <p><strong>Total Initial:</strong> $1994.52</p>
+            <p><strong>Total Profit:</strong> $64.84</p>
+            <p><strong>Profit %:</strong> 3.25%</p>
+            <p><strong>Total Trades:</strong> 10</p>
+            <p><strong>Accuracy:</strong> 100.00%</p>
+            </div>
+            
+        </div></body></html>
+        

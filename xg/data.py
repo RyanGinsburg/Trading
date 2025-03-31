@@ -140,13 +140,22 @@ def array_to_comma_separated_string(array: np.ndarray) -> str:
 
 def process_single_market_day(stock: str, market_date: datetime):
     print(f"\n📈 Processing {stock} for {market_date.strftime('%Y-%m-%d')}")
-    
-    # Fetch full data up to the date
-    full_data = fetch_stock_data(stock, start_date, market_date)
-    if full_data.empty or market_date not in full_data.index:
-        print(f"⚠️ No data for {stock} on {market_date}")
+
+    # Fetch data up to market_date + buffer so shifting works
+    buffer_days = forecast_horizon * 2
+    extended_end = market_date + timedelta(days=buffer_days)
+    full_data = fetch_stock_data(stock, start_date, extended_end)
+
+    if full_data.empty:
+        print(f"⚠️ No data for {stock} up to {market_date}")
         return
 
+    if pd.Timestamp(market_date) not in full_data.index:
+        print(f"⚠️ Market date {market_date.strftime('%Y-%m-%d')} not in full_data index. Skipping.")
+        print(f"🗓️ Data range: {full_data.index.min().date()} to {full_data.index.max().date()}")
+        return
+
+    
     full_data_np = full_data.to_numpy()
     full_data_columns = full_data.columns
     full_data_index = full_data.index
@@ -155,14 +164,21 @@ def process_single_market_day(stock: str, market_date: datetime):
     np_full_data = np.ndarray(full_data_np.shape, dtype=full_data_np.dtype, buffer=shm.buf)
     np_full_data[:] = full_data_np[:]
 
-    table_name = create_table_if_not_exists(stock, market_date, db_name)
+    # Always write to the fixed group/table name (e.g., "2025_02_11")
+    fixed_group_date = datetime(2025, 2, 11)
+    table_name = create_table_if_not_exists(stock, fixed_group_date, db_name)
 
-    args = (market_date, table_name, shm.name, full_data_np.shape, full_data_np.dtype, full_data_columns, full_data_index, stock, 1)
+    args = (
+        market_date, table_name, shm.name, full_data_np.shape,
+        full_data_np.dtype, full_data_columns, full_data_index, stock, 1
+    )
+
     process_dates(*args)
 
     shm.close()
     shm.unlink()
     print(f"✅ Finished {stock} for {market_date.strftime('%Y-%m-%d')}")
+
 
 def process_stocks(stock):
     print("************************************************************************")
@@ -254,18 +270,19 @@ def insert_predictions(table_name, last_date, last_open, last_close, last_rsi, l
         cursor.execute(insert_sql, (last_date, last_open, last_close, last_rsi, last_williams, last_adx, *predictions))
         conn.commit()
 
-
 def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stock, day):
     print("________________________________________________________")
     print(f'[1] {stock} Processing day {day} for date {date}')
     print("________________________________________________________")
 
-    RESET = (day-1) % 5 == 0
+    RESET = (day - 1) % 5 == 0
     existing_shm = shared_memory.SharedMemory(name=shm_name)
     np_full_data = np.ndarray(shape, dtype=dtype, buffer=existing_shm.buf)
     full_data = pd.DataFrame(np_full_data, columns=columns, index=index)
 
-    df = full_data.loc[start_date:date].copy()
+    # Extend forward to allow shift to generate future targets
+    end_date_for_shift = date + timedelta(days=forecast_horizon * 2)
+    df = full_data.loc[start_date:end_date_for_shift].copy()
 
     # Add lagged features
     df['close_lag1'] = df['close'].shift(1)
@@ -279,36 +296,63 @@ def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stoc
     for i in range(1, forecast_horizon + 1):
         df[f'Close_T+{i}'] = df['close'].shift(-i)
 
-    df['Close_T+1'] = df['close'].shift(-1)
-    df.dropna(inplace=True)
+    # Check for NaNs before dropping anything
+    """
+        print("\n🔍 Checking for NaNs in target columns:")
+        for i in range(1, forecast_horizon + 1):
+            col = f'Close_T+{i}'
+            nan_count = df[col].isna().sum()
+            print(f"{col}: {nan_count} NaNs")
 
-    y_class = (df['Close_T+1'] > df['close']).astype(int)
+        print("\n🔍 First and last rows with any NaNs:")
+        nan_rows = df[df.isna().any(axis=1)]
+        print(nan_rows[['close'] + [f'Close_T+{i}' for i in range(1, forecast_horizon + 1)]].tail(10))
+    """
 
+    target_cols = [f'Close_T+{i}' for i in range(1, forecast_horizon + 1)]
+
+    # Filter for training (complete rows only)
+    df_train = df.dropna(subset=features + target_cols)
+
+    # Use df_train for training
     scaler = StandardScaler()
-    X = df[features]
-    X_scaled = scaler.fit_transform(X)
-    y = df[[f'Close_T+{i}' for i in range(1, forecast_horizon + 1)]]
-    y_class_full = y_class
+    X_train = scaler.fit_transform(df_train[features])
+    y = df_train[target_cols]
+    y_class_full = (df_train['Close_T+1'] > df_train['close']).astype(int)
 
-    split_index = int(0.8 * len(df))
-    X_train, X_test = X_scaled[:split_index], X_scaled[split_index:]
+    split_index = int(0.8 * len(df_train))
+    X_train, X_test = X_train[:split_index], X_train[split_index:]
     y_train, y_test = y[:split_index], y[split_index:]
     y_train_class = y_class_full[:split_index]
     y_test_class = y_class_full[split_index:]
 
+    date = pd.Timestamp(date)
+    df.index = df.index.normalize()
+    date = pd.Timestamp(date).normalize()
+    
+    if date not in df.index:
+        print(f"⚠️ Date {date.strftime('%Y-%m-%d')} not found in DataFrame for {stock}. Skipping.")
+        print(f"Exact date: {date} ({type(date)}), df.index.dtype: {df.index.dtype}")
+        print(f"Match exists: {date in df.index}")
+        print("Closest matching timestamp:", df.index[df.index == pd.Timestamp(date)])
+        existing_shm.close()
+        return
+
+    y_class = (df['Close_T+1'] > df['close']).astype(int)
+    X = df[features]
+
+    y_test_class = y_class_full[split_index:]
+
     trial_num = 5 if testing else (150 if RESET else 50)
 
-    # Directional Accuracy Score (DAS)
     def directional_accuracy(y_true, y_pred, current_price):
         signs_true = np.sign(y_true - current_price)
         signs_pred = np.sign(y_pred - current_price)
         return np.mean(signs_true == signs_pred)
 
-    # Profit Score
     def profit_score(y_pred, open_prices):
         return np.sum((y_pred - open_prices)[(y_pred - open_prices) > 0])
 
-    # Create history-aware trial suggestions
     def create_optimization_trial(previous_params):
         def suggest_with_history(trial, param_name, suggest_type, *args):
             if previous_params and param_name in previous_params:
@@ -328,7 +372,6 @@ def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stoc
                     return trial.suggest_loguniform(param_name, *args)
         return suggest_with_history
 
-    # Define a generic Optuna objective function supporting multiple loss types and parameter memory
     def optuna_objective(model_class, loss_type, X_train, y_train, df, suggest_with_history, stock, version, opt_history):
         def objective(trial):
             if model_class.__name__ == 'XGBRegressor':
@@ -390,19 +433,11 @@ def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stoc
             if not scores:
                 return float("inf")
 
-            # Save the best parameters to optimization history
             opt_history.store_parameters(stock, version, params)
-
             return np.mean(scores)
 
         return objective
 
-    # Forecast function that returns a flat list of predictions
-    def rolling_forecast(model, latest_data):
-        preds = model.predict(latest_data.reshape(1, -1))[0]
-        return str(np.round(preds, 4).tolist())
-
-    
     def build_model(model_class, loss_type, stock, version):
         previous_params = opt_history.get_parameters(stock, version)
         suggest_with_history = create_optimization_trial(previous_params)
@@ -419,7 +454,6 @@ def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stoc
         best_model.fit(X_train, y_train)
         return best_model
 
-
     models = {
         "pred_1_1": build_model(RandomForestRegressor, 'profit', stock, "pred_1_1"),
         "pred_1_2": build_model(RandomForestRegressor, 'profit', stock, "pred_1_2"),
@@ -435,30 +469,34 @@ def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stoc
         "pred_6_2": build_model(xgb.XGBRegressor, 'hybrid', stock, "pred_6_2"),
     }
 
-
-    latest_data = X_test[-1]
-    # Forecast function that returns a flat list of predictions
     def rolling_forecast(model, latest_data):
-        preds = model.predict(latest_data.reshape(1, -1))[0]
+        preds = model.predict(latest_data.values.reshape(1, -1))[0]
         return str(np.round(preds, 4).tolist())
 
-    predictions = [rolling_forecast(model, latest_data) for model in models.values()]
+    # Only predict if the row has no missing features
+    if date in df.index:
+        latest_row = df.loc[date]
+        if not latest_row[features].isna().any():
+            latest_data = latest_row[features].values.reshape(1, -1)
+            predictions = [rolling_forecast(model, latest_row[features]) for model in models.values()]
 
+            clf = GradientBoostingClassifier()
+            clf.fit(X_train, y_train_class)
+            class_pred = clf.predict_proba(latest_data)[0][1]
 
-    clf = GradientBoostingClassifier()
-    clf.fit(X_train, y_train_class)
-    class_pred = clf.predict_proba(latest_data.reshape(1, -1))[0][1]
+            last_date = latest_row.name.date()
+            last_close = latest_row['close']
+            last_open = latest_row['open']
+            last_rsi = latest_row['rsi']
+            last_williams = latest_row['williams']
+            last_adx = latest_row['adx']
 
-    last_row = df.iloc[-1]
-    last_date = last_row.name.date()
-    last_close = last_row['close']
-    last_open = last_row['open']
-    last_rsi = last_row['rsi']
-    last_williams = last_row['williams']
-    last_adx = last_row['adx']
-
-    predictions.append(str(round(class_pred, 4)))
-    insert_predictions(table_name, last_date, last_open, last_close, last_rsi, last_williams, last_adx, predictions, db_name)
+            predictions.append(str(round(class_pred, 4)))
+            insert_predictions(table_name, last_date, last_open, last_close, last_rsi, last_williams, last_adx, predictions, db_name)
+        else:
+            print(f"⚠️ Missing features on {date.strftime('%Y-%m-%d')} — skipping prediction")
+    else:
+        print(f"⚠️ Date {date.strftime('%Y-%m-%d')} not in index — skipping prediction")
 
     existing_shm.close()
     existing_shm.unlink()
@@ -468,7 +506,8 @@ def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stoc
 # Global Variables
 # -----------------------------
 testing = False
-processes_num = 10
+#abc
+processes_num = 13
 
 if testing:
     forecast_horizon = 2 # Predict next 7 days
@@ -523,6 +562,10 @@ last_known_dates = {
     "META": "2025-03-14",
 }
     # "TSLA": None,   # 🚨 New stock, no data yet
+    #"MSFT": "2025-03-14",
+    #"NVDA": "2025-03-14",
+    #"GOOGL": "2025-03-13",
+    #"META": "2025-03-14",
 
 if __name__ == "__main__":
     if realtime:
