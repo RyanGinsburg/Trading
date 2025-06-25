@@ -469,8 +469,11 @@ def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stoc
         "pred_6_2": build_model(xgb.XGBRegressor, 'hybrid', stock, "pred_6_2"),
     }
 
-    def rolling_forecast(model, latest_data):
+    def rolling_forecast(model, latest_data, last_close):
         preds = model.predict(latest_data.values.reshape(1, -1))[0]
+        # Align first prediction to last_close
+        preds = np.array(preds)
+        preds -= preds[0] - last_close
         return str(np.round(preds, 4).tolist())
 
     # Only predict if the row has no missing features
@@ -478,7 +481,8 @@ def process_dates(date, table_name, shm_name, shape, dtype, columns, index, stoc
         latest_row = df.loc[date]
         if not latest_row[features].isna().any():
             latest_data = latest_row[features].values.reshape(1, -1)
-            predictions = [rolling_forecast(model, latest_row[features]) for model in models.values()]
+            # Use the new rolling_forecast with last_close alignment
+            predictions = [rolling_forecast(model, latest_row[features], latest_row['close']) for model in models.values()]
 
             clf = GradientBoostingClassifier()
             clf.fit(X_train, y_train_class)
@@ -554,13 +558,18 @@ start_date = future_date - timedelta(days=3000)
 full_dates = dates()
 
 realtime = True
+
 last_known_dates = {
-    "AAPL": "2025-03-14",
-    "MSFT": "2025-03-14",
-    "NVDA": "2025-03-14",
-    "GOOGL": "2025-03-13",
-    "META": "2025-03-14",
+    "AAPL": "2025-06-24",
+    "AMD": "2025-06-24",
+    "GOOGL": "2025-06-24",
+    "META": "2025-06-24",
+    "MSFT": "2025-06-24",
+    "NVDA": "2025-06-24",
+    "SPY": "2025-06-24",
+    "TSLA": "2025-06-24",
 }
+
     # "TSLA": None,   # 🚨 New stock, no data yet
     #"MSFT": "2025-03-14",
     #"NVDA": "2025-03-14",
@@ -581,8 +590,12 @@ if __name__ == "__main__":
             for date in missing_days:
                 tasks.append((stock, date))
 
-        print(f"⏱️ Starting multiprocessing with {processes_num} workers for {len(tasks)} tasks...\n")
+        # Dynamically set processes_num to use all available CPU cores, but not more than needed
+        max_procs = os.cpu_count() or 1
+        processes_num = min(max_procs, len(tasks)) if len(tasks) > 0 else 1
 
+        print(f"⏱️ Starting multiprocessing with {processes_num} workers for {len(tasks)} tasks...\n")
+        
         with Pool(processes=processes_num) as pool:
             pool.starmap(process_single_market_day, tasks)
 

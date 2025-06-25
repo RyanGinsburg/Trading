@@ -6,6 +6,13 @@ import os
 from typing import Callable, List, Tuple
 import math
 from datetime import datetime
+import matplotlib.pyplot as plt #type: ignore
+import base64
+from io import BytesIO
+from matplotlib import rcParams  #type: ignore
+import matplotlib.dates as mdates  #type: ignore
+import matplotlib.ticker as ticker  #type: ignore
+from matplotlib.ticker import MaxNLocator #type: ignore
 
 def level4_linear(score: float) -> float:
     """Linearly scales between -1 and 1"""
@@ -247,11 +254,12 @@ class PredictionResult:
     level4_method: str
     profit: float
     total_trades: int
+    total_buys: int
     correct_trades: int
     mean_prediction_error: float
 
     def __str__(self):
-        accuracy = (self.correct_trades / self.total_trades * 100) if self.total_trades > 0 else 0
+        accuracy = (self.correct_trades / self.total_buys * 100) if self.total_trades > 0 else 0
         return (f"Method: {self.method}\n"
                 f"Level 1: {self.level1_method}\n"
                 f"Level 2: {self.level2_method}\n"
@@ -270,8 +278,76 @@ class WeightedPrediction:
     error1: float = 0.0  # Error of pred1
     error2: float = 0.0  # Error of pred2
 
+def generate_inline_plot(group: List[TradingDay], trade_signals: List[Tuple[str, float]], symbol: str, group_index: int) -> str:
+    # Prepare price timeline with spacing
+    prices = []
+    x_vals = []
+    dates_for_xticks = []
+    tick_positions = []
+    spacing = 0.25
+    current_x = 0
+
+    opens = []
+    closes = []
+    open_x = []
+    close_x = []
+
+    for i, day in enumerate(group):
+        prices.extend([day.open, day.close])
+        x_vals.extend([current_x, current_x + spacing])
+        dates_for_xticks.append(day.date)
+        tick_positions.append(current_x + spacing / 2)
+        # For open/close lines
+        opens.append(day.open)
+        closes.append(day.close)
+        open_x.append(current_x)
+        close_x.append(current_x + spacing)
+        current_x += 1  # larger spacing between days
+
+    # Align plotted trades with backtest: buy/sell at i+1 open
+    buys_x, buys_y, sells_x, sells_y = [], [], [], []
+    holding = False
+    for i, (_, signal) in enumerate(trade_signals):
+        if signal >= 0.3 and not holding and i+1 < len(group):
+            buys_x.append(open_x[i+1])
+            buys_y.append(opens[i+1])
+            holding = True
+        elif signal <= -0.3 and holding and i+1 < len(group):
+            sells_x.append(open_x[i+1])
+            sells_y.append(opens[i+1])
+            holding = False
+    # If still holding at end, plot a sell at last close
+    if holding:
+        sells_x.append(close_x[-1])
+        sells_y.append(closes[-1])
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    # Main open→close line
+    ax.plot(x_vals, prices, color='black', linewidth=2, label='Open→Close Line')
+    # Add open and close lines
+    ax.plot(open_x, opens, color='#8ecae6', linestyle='--', linewidth=1, alpha=0.7, label='Open Price')
+    ax.plot(close_x, closes, color='#ffb703', linestyle='--', linewidth=1, alpha=0.7, label='Close Price')
+    # Buy/sell markers
+    ax.scatter(buys_x, buys_y, color='green', marker='^', s=120, label='Buy')
+    ax.scatter(sells_x, sells_y, color='red', marker='v', s=120, label='Sell')
+    ax.set_xticks(tick_positions)
+    ax.set_xticklabels(dates_for_xticks, rotation=45, ha='right', fontsize=9)
+    ax.set_title(f"{symbol} – Group {group_index} Open→Close Timeline", fontsize=14)
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Price ($)")
+    ax.grid(True, linestyle='--', alpha=0.4)
+    ax.legend()
+    plt.tight_layout()
+
+    buf = BytesIO()
+    plt.savefig(buf, format='png')
+    plt.close()
+    buf.seek(0)
+    encoded = base64.b64encode(buf.read()).decode('utf-8')
+    return f'<img src="data:image/png;base64,{encoded}" alt="Signal Chart for {symbol} Group {group_index}" style="width:100%;max-width:800px;margin-top:10px;">'
+
 class StrategyTester:
-    def __init__(self, json_file: str, max_group_length: int = 20):  # ← new parameter
+    def __init__(self, json_file: str, max_group_length: int =20):  # ← new parameter
         # Ensure optimal_weights is defined before loading data
         self.optimal_weights = {}  # symbol -> list of optimal weights dict per group
         self.trading_data = self._load_data(json_file, max_group_length)
@@ -307,7 +383,7 @@ class StrategyTester:
                         if key.startswith('pred_'):
                             float_list = [float(x.strip()) for x in value.strip('[]').split(',')]
                             #float_list = [float(x.strip()) for x in value.split(',')]
-                            #float_list = float_list[1:]
+                            float_list = float_list[1:]
                             predictions[key] = float_list
                     if i < len(group_data) - max(len(predictions.get('pred_1_1', [])), 1):
                         future_prices = [float(group_data[i + j + 1]['close'])
@@ -549,18 +625,31 @@ class StrategyTester:
 
         return WeightedPrediction(weight=best_weight, error=min_error, error1=error1, error2=error2)
 
-    def backtest_strategy_group(self, group: List[TradingDay], symbol: str, method_name: str, get_predictions: Callable,
-                            level1_method: Callable, level2_method: Callable,
-                            level3_method: Callable, level4_method: Callable) -> Tuple[PredictionResult, int]:
-    
+    def backtest_strategy_group(
+        self,
+        group: List[TradingDay],
+        symbol: str,
+        group_index: int,
+        method_name: str,
+        get_predictions: Callable,
+        level1_method: Callable,
+        level2_method: Callable,
+        level3_method: Callable,
+        level4_method: Callable
+    ) -> Tuple[PredictionResult, int, list]:
         position = 0
         entry_price = 0.0
         profit = 0.0
-        total_trades = 0
+        total_trades = 0  # round-trip trades (buy+sell)
+        total_buys = 0
         correct_trades = 0
         prediction_errors = []
         n = len(group)
-        final_decision = 0  # 1 = buy, -1 = sell, 0 = hold
+        final_decision = 0
+        trade_signals = []
+        buy_indices = []
+        sell_indices = []
+        holding = False
 
         for i, day in enumerate(group[:-1]):
             predictions = get_predictions(day)
@@ -569,7 +658,8 @@ class StrategyTester:
                 level1_method, level2_method,
                 level3_method, level4_method
             )
-            final_decision = decision  # ✅ Always update the most recent decision
+            trade_signals.append((day.date, decision))
+            final_decision = decision
 
             next_day = group[i + 1]
             if i + len(predictions) < n:
@@ -577,17 +667,33 @@ class StrategyTester:
                 error = self.calculate_prediction_error(predictions, future_prices)
                 prediction_errors.append(error)
 
+            # Count every buy and every sell as a trade
             if decision == 1 and position == 0:
                 position = 1
-                entry_price = next_day.open
-                total_trades += 1
+                entry_price = group[i+1].open  # Buy at next day's open
+                buy_indices.append(i+1)
+                total_buys += 1
+                total_trades += 1  # Count buy as a trade
+                holding = True
             elif decision == -1 and position == 1:
                 position = 0
-                exit_price = next_day.open
+                exit_price = group[i+1].open   # Sell at next day's open
+                sell_indices.append(i+1)
                 trade_profit = exit_price - entry_price
                 profit += trade_profit
                 if trade_profit > 0:
                     correct_trades += 1
+                total_trades += 1  # Count sell as a trade
+                holding = False
+
+        # At end, close any open position
+        if position == 1:
+            exit_price = group[-1].close
+            profit += exit_price - entry_price
+            sell_indices.append(len(group)-1)
+            total_trades += 1  # Count final sell as a trade
+            if exit_price - entry_price > 0:
+                correct_trades += 1
 
         mean_prediction_error = sum(prediction_errors) / len(prediction_errors) if prediction_errors else 0
 
@@ -602,9 +708,10 @@ class StrategyTester:
             level4_method=get_name(level4_method),
             profit=profit,
             total_trades=total_trades,
+            total_buys=total_buys,
             correct_trades=correct_trades,
             mean_prediction_error=mean_prediction_error
-        ), final_decision
+        ), final_decision, trade_signals
 
     def evaluate_all_combinations_group(self, group: List[TradingDay], symbol: str, group_index: int) -> List[PredictionResult]:
         results = []
@@ -675,10 +782,10 @@ class StrategyTester:
                 for l2 in level2_methods:
                     for l3 in level3_methods:
                         for l4 in level4_methods:
-                            result, decision = self.backtest_strategy_group(
-                                group, symbol, method_name, get_predictions, l1, l2, l3, l4
+                            result, decision, trade_signals = self.backtest_strategy_group(
+                                group, symbol, group_index, method_name, get_predictions, l1, l2, l3, l4
                             )
-                            results.append((result, decision))
+                            results.append((result, decision, trade_signals))
 
                             pct = (result.profit / group[0].open * 100) if group[0].open else 0
                             if pct > best_profit_pct:
@@ -712,9 +819,13 @@ class StrategyTester:
                                 def passthrough(x): return x
                                 passthrough.__name__ = special_l1.__name__
 
-                                result, decision = self.backtest_strategy_group(
-                                    group, symbol, pred3_key, get_special_preds, passthrough, l2, l3, l4
+                                result, decision, trade_signals = self.backtest_strategy_group(
+                                    group, symbol, group_index, pred3_key, get_special_preds, passthrough, l2, l3, l4
                                 )
+                                results.append((result, decision, trade_signals))
+
+
+
                                 results.append((result, decision))
 
                                 pct = (result.profit / group[0].open * 100) if group[0].open else 0
@@ -735,7 +846,8 @@ class StrategyTester:
             self.final_decisions[symbol] = "Hold"
 
         # ✅ Return only the results (not the decisions)
-        return [r[0] for r in results]
+        return results
+
 
 
     def _calculate_buy_and_hold_profit(self, group: List[TradingDay]) -> Tuple[float, float]:
@@ -783,10 +895,19 @@ class StrategyTester:
                     continue
 
                 print(f"  Processing group {group_index+1}/{len(groups)} for stock {symbol}...")
-                results = self.evaluate_all_combinations_group(group, symbol, group_index)
-                print(f"    Completed evaluation for group {group_index+1} ({len(results)} strategies tested)")
+                results_with_plots = self.evaluate_all_combinations_group(group, symbol, group_index)
+                results = [r[0] for r in results_with_plots]
 
-                best_strategy = max(results, key=lambda r: (r.profit / group[0].open * 100) if group[0].open != 0 else -float('inf'))
+                print(f"    Completed evaluation for group {group_index+1} ({len(results)} strategies tested)")
+                
+                best_result = max(
+                    results_with_plots,
+                    key=lambda r: (r[0].profit / group[0].open * 100) if group[0].open != 0 else -float('inf')
+                )
+
+                best_strategy, _, trade_signals = best_result
+                best_plot_html = generate_inline_plot(group, trade_signals, symbol, group_index)
+
 
                 # ✅ Ensure group-best strategy is counted in cumulative totals
                 best_key = (best_strategy.method, best_strategy.level1_method, best_strategy.level2_method,
@@ -796,21 +917,24 @@ class StrategyTester:
                         'total_profit': 0.0,
                         'total_initial': 0.0,
                         'total_trades': 0,
+                        'total_buys': 0,
                         'total_correct': 0
                     }
                 cumulative[best_key]['total_profit'] += best_strategy.profit
                 cumulative[best_key]['total_initial'] += group[0].open
                 cumulative[best_key]['total_trades'] += best_strategy.total_trades
+                cumulative[best_key]['total_buys'] += best_strategy.total_buys
                 cumulative[best_key]['total_correct'] += best_strategy.correct_trades
 
                 perfect_result = self._calculate_perfect_profit(group)
                 open_prices = [d.open for d in group]
                 trend_profit, trend_trades, trend_winrate = trend_following_strategy(open_prices)
                 bh_profit, bh_pct = self._calculate_buy_and_hold_profit(group)
-                self.results_by_stock[symbol].append(
-                    (group_index, best_strategy, perfect_result, trend_profit, trend_trades, trend_winrate,
-                    results, group[0].open, bh_profit, bh_pct)
-                )
+                
+                self.results_by_stock[symbol].append((
+                    group_index, best_strategy, perfect_result, trend_profit, trend_trades, trend_winrate,
+                    [r[0] for r in results_with_plots], group[0].open, bh_profit, bh_pct, best_plot_html
+                ))
 
                 if len(groups) == 1:
                     self.cumulative_results_by_stock[symbol] = {
@@ -818,6 +942,7 @@ class StrategyTester:
                             'total_profit': best_strategy.profit,
                             'total_initial': group[0].open,
                             'total_trades': best_strategy.total_trades,
+                            'total_buys': best_strategy.total_buys,
                             'total_correct': best_strategy.correct_trades
                         }
                     }
@@ -829,11 +954,13 @@ class StrategyTester:
                             'total_profit': 0.0,
                             'total_initial': 0.0,
                             'total_trades': 0,
+                            'total_buys': 0,
                             'total_correct': 0
                         }
                     cumulative[key]['total_profit'] += res.profit
                     cumulative[key]['total_initial'] += group[0].open
                     cumulative[key]['total_trades'] += res.total_trades
+                    cumulative[key]['total_buys'] += res.total_buys
                     cumulative[key]['total_correct'] += res.correct_trades
 
                 total_initial_buy_hold += group[0].open
@@ -891,11 +1018,13 @@ class StrategyTester:
                         'total_profit': 0.0,
                         'total_initial': 0.0,
                         'total_trades': 0,
+                        'total_buys': 0,
                         'total_correct': 0
                     }
                 global_cumulative[key]['total_profit'] += stats['total_profit']
                 global_cumulative[key]['total_initial'] += stats['total_initial']
                 global_cumulative[key]['total_trades'] += stats['total_trades']
+                global_cumulative[key]['total_buys'] += stats['total_buys']
                 global_cumulative[key]['total_correct'] += stats['total_correct']
 
         best_global_key = None
@@ -920,6 +1049,7 @@ class StrategyTester:
             'total_initial': 0.0,
             'total_profit': 0.0,
             'total_trades': 0,
+            'total_buys': 0,
             'total_correct': 0
         }
 
@@ -928,9 +1058,8 @@ class StrategyTester:
             'total_initial': 0.0,
             'total_profit': 0.0,
             'total_trades': 0,
-            'total_correct': 0,
-            'profit_pct': 0.0,
-            'accuracy': 0.0
+            'total_buys': 0,
+            'total_correct': 0
         }
 
         top_stocks = [s[0] for s in stock_performance[:5]]
@@ -943,11 +1072,13 @@ class StrategyTester:
                         'total_initial': 0.0,
                         'total_profit': 0.0,
                         'total_trades': 0,
+                        'total_buys': 0,
                         'total_correct': 0
                     }
                 strategy_sums[key]['total_initial'] += stats['total_initial']
                 strategy_sums[key]['total_profit'] += stats['total_profit']
                 strategy_sums[key]['total_trades'] += stats['total_trades']
+                strategy_sums[key]['total_buys'] += stats['total_buys']
                 strategy_sums[key]['total_correct'] += stats['total_correct']
 
         best_key = None
@@ -964,9 +1095,10 @@ class StrategyTester:
                         'total_initial': initial,
                         'total_profit': stats['total_profit'],
                         'total_trades': stats['total_trades'],
+                        'total_buys': stats['total_buys'],
                         'total_correct': stats['total_correct'],
                         'profit_pct': pct,
-                        'accuracy': (stats['total_correct'] / stats['total_trades'] * 100)
+                        'accuracy': (stats['total_correct'] / stats['total_buys'] * 100)
                         if stats['total_trades'] > 0 else 0.0
                     }
 
@@ -984,7 +1116,7 @@ class StrategyTester:
             )
             accuracy = (
                 self.per_stock_best_portfolio['total_correct'] /
-                self.per_stock_best_portfolio['total_trades'] * 100
+                (self.per_stock_best_portfolio['total_trades']/2) * 100
                 if self.per_stock_best_portfolio['total_trades'] > 0 else 0
             )
             self.per_stock_best_portfolio['profit_pct'] = profit_pct
@@ -1061,8 +1193,8 @@ class StrategyTester:
             html_content += f"<div class='stock-section'><h2>Stock: {symbol}</h2>"
 
             for (group_index, best_strategy, perfect_result, trend_profit, trend_trades, trend_winrate,
-                results, group_initial, group_bh_profit, group_bh_pct) in group_results:
-
+                results, group_initial, group_bh_profit, group_bh_pct, plot_html) in group_results:
+            
                 best_pct = (best_strategy.profit / group_initial * 100) if group_initial != 0 else 0
                 perfect_profit, perfect_pct, perfect_trades, _ = perfect_result
 
@@ -1106,6 +1238,7 @@ class StrategyTester:
                 <p><strong>📊 Buy and Hold:</strong> Profit: ${group_bh_profit:.2f}, % Profit: {group_bh_pct:.2f}%</p>
                 <p><strong>🎯 Perfect Trading:</strong> Profit: ${perfect_profit:.2f}, % Profit: {perfect_pct:.2f}%, Trades: {perfect_trades}</p>
                 <p><strong>📉 Trend-Following:</strong> Profit: ${trend_profit:.2f}, Trades: {trend_trades}, Win Rate: {trend_winrate * 100:.2f}%</p>
+                {plot_html}
                 <hr>
                 """
 
@@ -1217,6 +1350,8 @@ class StrategyTester:
                 """
                 for stock in sorted(self.final_decisions.keys()):
                     decision = self.final_decisions[stock]
+                    if decision not in ("Buy", "Sell"):
+                        decision = "Hold / No Action"
                     html_content += f"<tr><td>{stock}</td><td>{decision}</td></tr>"
                 html_content += """
                 </table>

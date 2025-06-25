@@ -17,7 +17,8 @@ def print_top_strategies(tester, n):
                 all_results,
                 group_initial,
                 group_bh_profit,
-                group_bh_pct
+                group_bh_pct,
+                best_plot_html  # ✅ this is the new value
             ) = tup
 
             accuracy = (best_strategy.correct_trades / best_strategy.total_trades * 100) if best_strategy.total_trades > 0 else 0
