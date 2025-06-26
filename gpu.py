@@ -1,6 +1,6 @@
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.models import Sequential #type: ignore
+from tensorflow.keras.layers import LSTM, Dense, Dropout #type: ignore
 import numpy as np
 import os
 

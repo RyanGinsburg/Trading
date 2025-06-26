@@ -316,10 +316,6 @@ def generate_inline_plot(group: List[TradingDay], trade_signals: List[Tuple[str,
             sells_x.append(open_x[i+1])
             sells_y.append(opens[i+1])
             holding = False
-    # If still holding at end, plot a sell at last close
-    if holding:
-        sells_x.append(close_x[-1])
-        sells_y.append(closes[-1])
 
     fig, ax = plt.subplots(figsize=(12, 6))
     # Main open→close line
@@ -636,7 +632,7 @@ class StrategyTester:
         level2_method: Callable,
         level3_method: Callable,
         level4_method: Callable
-    ) -> Tuple[PredictionResult, int, list]:
+    ) -> Tuple[PredictionResult, int, list, int]:  # <-- add final position to return
         position = 0
         entry_price = 0.0
         profit = 0.0
@@ -711,7 +707,7 @@ class StrategyTester:
             total_buys=total_buys,
             correct_trades=correct_trades,
             mean_prediction_error=mean_prediction_error
-        ), final_decision, trade_signals
+        ), final_decision, trade_signals, position  # <-- return final position
 
     def evaluate_all_combinations_group(self, group: List[TradingDay], symbol: str, group_index: int) -> List[PredictionResult]:
         results = []
@@ -764,6 +760,7 @@ class StrategyTester:
         best_strategy = None
         best_profit_pct = -float('inf')
         best_decision = 0
+        best_final_position = 0  # Track final position for best strategy
 
         for method_name, get_predictions in prediction_methods:
             level4_methods = [
@@ -782,16 +779,18 @@ class StrategyTester:
                 for l2 in level2_methods:
                     for l3 in level3_methods:
                         for l4 in level4_methods:
-                            result, decision, trade_signals = self.backtest_strategy_group(
+                            # FIX: Unpack 4 values
+                            result, decision, trade_signals, final_position = self.backtest_strategy_group(
                                 group, symbol, group_index, method_name, get_predictions, l1, l2, l3, l4
                             )
-                            results.append((result, decision, trade_signals))
+                            results.append((result, decision, trade_signals, final_position))
 
                             pct = (result.profit / group[0].open * 100) if group[0].open else 0
                             if pct > best_profit_pct:
                                 best_profit_pct = pct
                                 best_strategy = result
                                 best_decision = decision
+                                best_final_position = final_position
 
             # Special Level 1 methods
             for special_l1 in [level1_confidence_blend, level1_error_adjusted]:
@@ -819,24 +818,24 @@ class StrategyTester:
                                 def passthrough(x): return x
                                 passthrough.__name__ = special_l1.__name__
 
-                                result, decision, trade_signals = self.backtest_strategy_group(
+                                # FIX: Unpack 4 values
+                                result, decision, trade_signals, final_position = self.backtest_strategy_group(
                                     group, symbol, group_index, pred3_key, get_special_preds, passthrough, l2, l3, l4
                                 )
-                                results.append((result, decision, trade_signals))
-
-
-
-                                results.append((result, decision))
+                                results.append((result, decision, trade_signals, final_position))
 
                                 pct = (result.profit / group[0].open * 100) if group[0].open else 0
                                 if pct > best_profit_pct:
                                     best_profit_pct = pct
                                     best_strategy = result
                                     best_decision = decision
+                                    best_final_position = final_position
 
-        # ✅ Store final decision from best strategy
+        # ✅ Store final decision and final position from best strategy
         if not hasattr(self, 'final_decisions'):
             self.final_decisions = {}
+        if not hasattr(self, 'final_positions'):
+            self.final_positions = {}
 
         if best_decision == 1:
             self.final_decisions[symbol] = "Buy"
@@ -844,6 +843,9 @@ class StrategyTester:
             self.final_decisions[symbol] = "Sell"
         else:
             self.final_decisions[symbol] = "Hold"
+
+        # Store final position (1 if holding, 0 if not)
+        self.final_positions[symbol] = best_final_position
 
         # ✅ Return only the results (not the decisions)
         return results
@@ -905,7 +907,12 @@ class StrategyTester:
                     key=lambda r: (r[0].profit / group[0].open * 100) if group[0].open != 0 else -float('inf')
                 )
 
-                best_strategy, _, trade_signals = best_result
+                # OLD (causes error):
+                # best_strategy, _, trade_signals = best_result
+
+                # NEW: Unpack all four values
+                best_strategy, _, trade_signals, _ = best_result
+
                 best_plot_html = generate_inline_plot(group, trade_signals, symbol, group_index)
 
 
@@ -1341,18 +1348,27 @@ class StrategyTester:
             </div>
             """
             
+            # Final Strategy-Based Signal section
             if hasattr(self, 'final_decisions') and self.final_decisions:
                 html_content += """
                 <div class='stock-section'>
                 <h4>📍 Final Strategy-Based Signal</h4>
                 <table>
-                    <tr><th>Stock</th><th>Decision</th></tr>
+                    <tr><th>Stock</th><th>Signal</th><th>Action Needed</th></tr>
                 """
                 for stock in sorted(self.final_decisions.keys()):
-                    decision = self.final_decisions[stock]
-                    if decision not in ("Buy", "Sell"):
-                        decision = "Hold / No Action"
-                    html_content += f"<tr><td>{stock}</td><td>{decision}</td></tr>"
+                    signal = self.final_decisions[stock]
+                    holding = self.final_positions.get(stock, 0)  # 1 if holding, 0 if not
+                    # Action logic:
+                    if signal == "Buy" and not holding:
+                        action = "Buy"
+                    elif signal == "Sell" and holding:
+                        action = "Sell"
+                    else:
+                        action = "Hold / No Action"
+                    if signal not in ("Buy", "Sell"):
+                        signal = "Hold / No Action"
+                    html_content += f"<tr><td>{stock}</td><td>{signal}</td><td>{action}</td></tr>"
                 html_content += """
                 </table>
                 </div>
