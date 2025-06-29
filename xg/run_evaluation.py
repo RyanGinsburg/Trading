@@ -31,6 +31,7 @@ def print_top_strategies(tester, n):
             print(f"  Level2: {best_strategy.level2_method}")
             print(f"  Level3: {best_strategy.level3_method}")
             print(f"  Level4: {best_strategy.level4_method}")
+            print(f"  Level5: {best_strategy.level5_method}")
             print(f"  Strategy Profit: ${best_strategy.profit:.2f} ({best_pct:.2f}%) with {best_strategy.total_trades} trades, Accuracy: {accuracy:.2f}%")
             print(f"  Buy and Hold Profit: ${group_bh_profit:.2f} ({group_bh_pct:.2f}%)")
             print(f"  Perfect Trading Profit: ${perfect_profit:.2f} ({perfect_pct:.2f}%) with {perfect_trades} trades")
@@ -44,13 +45,6 @@ def main():
     print("Evaluating all strategy combinations for all stocks and groups...")
     tester.run_all_backtests(json_path)
     print_top_strategies(tester, 3)
-    if tester.global_best:
-        best_key, best_pct, stats = tester.global_best
-        global_bh_profit, global_bh_pct = tester.global_buy_hold
-        print("\nGlobal Best Strategy Details:")
-        print(f"Strategy: Prediction {best_key[0]}, L1: {best_key[1]}, L2: {best_key[2]}, L3: {best_key[3]}, L4: {best_key[4]}")
-        print(f"Global Cumulative Profit Percentage: {best_pct:.2f}%")
-        print(f"Global Buy and Hold Profit: ${global_bh_profit:.2f} ({global_bh_pct:.2f}%)")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"strategy_results_{timestamp}.html"
     tester.table = False

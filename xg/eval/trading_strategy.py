@@ -1556,20 +1556,6 @@ class StrategyTester:
             </table>
             </div>
             """
-        
-        if self.global_unified_strategy['strategy_key']:
-            key = self.global_unified_strategy['strategy_key']
-            html_content += f"""
-            <div class='stock-section'>
-            <h2>🧠 Unified Strategy Across Top Stocks</h2>
-            <p><strong>Strategy Used:</strong> Prediction {key[0]}, L1: {key[1]}, L2: {key[2]}, L3: {key[3]}, L4: {key[4]}, L5: {key[5]}</p>
-            <p><strong>Total Initial:</strong> ${self.global_unified_strategy['total_initial']:.2f}</p>
-            <p><strong>Total Profit:</strong> ${self.global_unified_strategy['total_profit']:.2f}</p>
-            <p><strong>Profit %:</strong> {self.global_unified_strategy['profit_pct']:.2f}%</p>
-            <p><strong>Total Trades:</strong> {self.global_unified_strategy['total_trades']}</p>
-            <p><strong>Accuracy:</strong> {self.global_unified_strategy['accuracy']:.2f}%</p>
-            </div>
-            """
 
         html_content += """
         </div></body></html>
