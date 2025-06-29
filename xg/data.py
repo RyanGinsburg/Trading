@@ -16,7 +16,7 @@ from keras.callbacks import EarlyStopping  # type: ignore
 from keras.regularizers import l2  # type: ignore
 from keras.optimizers import Adam  # type: ignore
 from keras import backend as K  # <-- Added for clearing sessions #type: ignore
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import requests  # type: ignore
 import pandas as pd #type: ignore
 import optuna #type: ignore
@@ -532,7 +532,7 @@ else:
     ]
     stock_start_point = 'NVDA'
     group = 1
-    date = 28
+    date_idx = 28
     
     if part == 1:
         stocks = stocks[:12]
@@ -558,23 +558,32 @@ start_date = future_date - timedelta(days=3000)
 full_dates = dates()
 
 realtime = True
+mannuel = False
 
-last_known_dates = {
-    "AAPL": "2025-06-24",
-    "AMD": "2025-06-24",
-    "GOOGL": "2025-06-24",
-    "META": "2025-06-24",
-    "MSFT": "2025-06-24",
-    "NVDA": "2025-06-24",
-    "SPY": "2025-06-24",
-    "TSLA": "2025-06-24",
-}
+if mannuel:
+    last_known_dates = {
+        "AAPL": "2025-06-24",
+        "AMD": "2025-06-24",
+        "GOOGL": "2025-06-24",
+        "META": "2025-06-24",
+        "MSFT": "2025-06-24",
+        "NVDA": "2025-06-24",
+        "SPY": "2025-06-24",
+        "TSLA": "2025-06-24",
+    }
 
-    # "TSLA": None,   # 🚨 New stock, no data yet
-    #"MSFT": "2025-03-14",
-    #"NVDA": "2025-03-14",
-    #"GOOGL": "2025-03-13",
-    #"META": "2025-03-14",
+        # "TSLA": None,   # 🚨 New stock, no data yet
+        #"MSFT": "2025-03-14",
+        #"NVDA": "2025-03-14",
+        #"GOOGL": "2025-03-13",
+        #"META": "2025-03-14",
+else:     
+    stocks = ["AAPL", "AMD", "GOOGL", "META", "MSFT", "NVDA", "SPY", "TSLA"]
+    today_str = date.today()
+    yesterday_str = today_str - timedelta(days=1)
+    yesterday_str = yesterday_str.strftime("%Y-%m-%d")
+    last_known_dates = {ticker: yesterday_str for ticker in stocks}
+
 
 if __name__ == "__main__":
     if realtime:

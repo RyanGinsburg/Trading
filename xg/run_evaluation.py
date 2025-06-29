@@ -42,7 +42,7 @@ def main():
     print("Initializing StrategyTester...")
     tester = StrategyTester(json_path)
     print("Evaluating all strategy combinations for all stocks and groups...")
-    tester.run_all_backtests()
+    tester.run_all_backtests(json_path)
     print_top_strategies(tester, 3)
     if tester.global_best:
         best_key, best_pct, stats = tester.global_best
