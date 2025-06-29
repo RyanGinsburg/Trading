@@ -558,18 +558,18 @@ start_date = future_date - timedelta(days=3000)
 full_dates = dates()
 
 realtime = True
-mannuel = False
+mannuel = True
 
 if mannuel:
     last_known_dates = {
-        "AAPL": "2025-06-24",
-        "AMD": "2025-06-24",
-        "GOOGL": "2025-06-24",
-        "META": "2025-06-24",
-        "MSFT": "2025-06-24",
-        "NVDA": "2025-06-24",
-        "SPY": "2025-06-24",
-        "TSLA": "2025-06-24",
+        "AAPL": "2025-06-26",
+        "AMD": "2025-06-26",
+        "GOOGL": "2025-06-26",
+        "META": "2025-06-26",
+        "MSFT": "2025-06-26",
+        "NVDA": "2025-06-26",
+        "SPY": "2025-06-26",
+        "TSLA": "2025-06-26",
     }
 
         # "TSLA": None,   # 🚨 New stock, no data yet
@@ -580,9 +580,18 @@ if mannuel:
 else:     
     stocks = ["AAPL", "AMD", "GOOGL", "META", "MSFT", "NVDA", "SPY", "TSLA"]
     today_str = date.today()
-    yesterday_str = today_str - timedelta(days=1)
-    yesterday_str = yesterday_str.strftime("%Y-%m-%d")
+    # Adjust for weekends: if today is Monday, Saturday, or Sunday, set yesterday_str to previous Friday
+    if today_str.weekday() == 0:  # Monday
+        yesterday = today_str - timedelta(days=3)
+    elif today_str.weekday() == 6:  # Sunday
+        yesterday = today_str - timedelta(days=2)
+    elif today_str.weekday() == 5:  # Saturday
+        yesterday = today_str - timedelta(days=1)
+    else:
+        yesterday = today_str - timedelta(days=1)
+    yesterday_str = yesterday.strftime("%Y-%m-%d")
     last_known_dates = {ticker: yesterday_str for ticker in stocks}
+    print(last_known_dates)
 
 
 if __name__ == "__main__":

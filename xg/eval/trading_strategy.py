@@ -346,7 +346,7 @@ def generate_inline_plot(group: List[TradingDay], trade_signals: List[Tuple[str,
         close_x.append(current_x + spacing)
         current_x += 1  # larger spacing between days
 
-    # Align plotted trades with backtest: buy/sell at i+1 open
+    # Align plotted trades with backtest: buy/sell at i+1 open (historical trades - triangles)
     buys_x, buys_y, sells_x, sells_y = [], [], [], []
     holding = False
     for i, (_, signal) in enumerate(trade_signals):
@@ -359,15 +359,46 @@ def generate_inline_plot(group: List[TradingDay], trade_signals: List[Tuple[str,
             sells_y.append(opens[i+1])
             holding = False
 
+    # ✅ ADD FUTURE SIGNALS (squares)
+    future_buys_x, future_buys_y, future_sells_x, future_sells_y = [], [], [], []
+    
+    # Get the final signal from the last day (this would be the next trading decision)
+    if trade_signals:
+        final_signal = trade_signals[-1][1]  # Last signal from the strategy
+        last_day = group[-1]
+        
+        # Position the future signal at the end of the chart
+        future_x = open_x[-1] + 1  # One position beyond the last day
+        future_price = last_day.close  # Use last close price as reference
+        
+        if final_signal == 1:  # Buy signal
+            future_buys_x.append(future_x)
+            future_buys_y.append(future_price)
+        elif final_signal == -1:  # Sell signal
+            future_sells_x.append(future_x)
+            future_sells_y.append(future_price)
+
     fig, ax = plt.subplots(figsize=(12, 6))
     # Main open→close line
     ax.plot(x_vals, prices, color='black', linewidth=2, label='Open→Close Line')
     # Add open and close lines
     ax.plot(open_x, opens, color='#8ecae6', linestyle='--', linewidth=1, alpha=0.7, label='Open Price')
     ax.plot(close_x, closes, color='#ffb703', linestyle='--', linewidth=1, alpha=0.7, label='Close Price')
-    # Buy/sell markers
-    ax.scatter(buys_x, buys_y, color='green', marker='^', s=120, label='Buy')
-    ax.scatter(sells_x, sells_y, color='red', marker='v', s=120, label='Sell')
+    
+    # Historical buy/sell markers (triangles)
+    ax.scatter(buys_x, buys_y, color='green', marker='^', s=120, label='Historical Buy')
+    ax.scatter(sells_x, sells_y, color='red', marker='v', s=120, label='Historical Sell')
+    
+    # ✅ Future buy/sell markers (squares)
+    if future_buys_x:
+        ax.scatter(future_buys_x, future_buys_y, color='darkgreen', marker='s', s=150, label='Future Buy Signal', edgecolors='black', linewidth=2)
+    if future_sells_x:
+        ax.scatter(future_sells_x, future_sells_y, color='darkred', marker='s', s=150, label='Future Sell Signal', edgecolors='black', linewidth=2)
+    
+    # ✅ Add a vertical line to separate historical from future
+    if future_buys_x or future_sells_x:
+        ax.axvline(x=open_x[-1] + 0.5, color='gray', linestyle=':', alpha=0.7, label='Future Signal')
+    
     ax.set_xticks(tick_positions)
     ax.set_xticklabels(dates_for_xticks, rotation=45, ha='right', fontsize=9)
     ax.set_xlabel("Date")
@@ -376,7 +407,7 @@ def generate_inline_plot(group: List[TradingDay], trade_signals: List[Tuple[str,
     ax.legend()
     plt.tight_layout()
 
-    buf = BytesIO()
+    buf = BytesIO() 
     plt.savefig(buf, format='png')
     plt.close()
     buf.seek(0)
@@ -895,7 +926,7 @@ class StrategyTester:
         best_strategy = None
         best_profit_pct = -float('inf')
         best_decision = 0
-        best_final_position = 0  # Track final position for best strategy
+        best_final_position = 0
 
         for l5_method_name in l5_method_names:
             for method_name, get_predictions in prediction_methods:
@@ -906,16 +937,11 @@ class StrategyTester:
                     self.level4_trend_following
                 ]
 
-                if method_name in confidence_based_level4_methods:
-                    level4_methods.append(
-                        lambda score, m=confidence_based_level4_methods[method_name]: apply_confidence_sizing(score, m)
-                    )
-
                 for l1 in base_level1_methods:
                     for l2 in level2_methods:
                         for l3 in level3_methods:
                             for l4 in level4_methods:
-                                combination_counter += 1  # Increment counter
+                                combination_counter += 1
                                 result, decision, trade_signals, final_position = self.backtest_strategy_group(
                                     group, symbol, group_index, method_name, get_predictions, l1, l2, l3, l4,
                                     api_key=YOUR_KEY, api_secret=YOUR_SECRET,
@@ -924,9 +950,16 @@ class StrategyTester:
                                     l5_precomputed=l5_precomputed
                                 )
                                 results.append((result, decision, trade_signals, final_position, l5_method_name))
-                                # ...rest of your logic...
+                                
+                                # ✅ ADD THIS: Track best strategy
+                                pct = (result.profit / 100.0 * 100)
+                                if pct > best_profit_pct:
+                                    best_profit_pct = pct
+                                    best_strategy = result
+                                    best_decision = decision
+                                    best_final_position = final_position
 
-        # Special L1 section
+        # Special L1 section - ADD THE SAME TRACKING HERE
         for special_l1 in [level1_confidence_blend, level1_error_adjusted]:
             for pred_num in range(1, 7):
                 pred1_key = f'pred_{pred_num}_1'
@@ -962,6 +995,7 @@ class StrategyTester:
                                 )
                                 results.append((result, decision, trade_signals, final_position, l5_method_name))
 
+                                # ✅ ADD THIS: Track best strategy here too
                                 pct = (result.profit / 100.0 * 100)
                                 if pct > best_profit_pct:
                                     best_profit_pct = pct
@@ -969,23 +1003,16 @@ class StrategyTester:
                                     best_decision = decision
                                     best_final_position = final_position
 
-        # ✅ Store final decision and final position from best strategy
+        # Now fix the final decision logic:
         if not hasattr(self, 'final_decisions'):
             self.final_decisions = {}
         if not hasattr(self, 'final_positions'):
             self.final_positions = {}
 
-        if best_decision == 1:
-            self.final_decisions[symbol] = "Buy"
-        elif best_decision == -1:
-            self.final_decisions[symbol] = "Sell"
-        else:
-            self.final_decisions[symbol] = "Hold"
-
-        # Store final position (1 if holding, 0 if not)
+        # Use the actual best strategy's final decision and position
+        self.final_decisions[symbol] = "Buy" if best_decision == 1 else ("Sell" if best_decision == -1 else "Hold")
         self.final_positions[symbol] = best_final_position
 
-        # ✅ Return only the results (not the decisions)
         return results
 
 
@@ -1508,19 +1535,19 @@ class StrategyTester:
             all_buys = sum(self.best_strategy_by_stock[s][2]['total_buys'] for s in all_symbols if s in self.best_strategy_by_stock)
             all_correct = sum(self.best_strategy_by_stock[s][2]['total_correct'] for s in all_symbols if s in self.best_strategy_by_stock)
 
-            all_profit_pct = (all_profit / all_initial * 100) if all_initial else 0
-            all_accuracy = (all_correct / all_buys * 100) if all_buys else 0
+            all_profit_pct = (all_profit / all_initial * 100) if all_initial != 0 else 0
+            all_accuracy = (all_correct / all_buys * 100) if all_buys != 0 else 0
 
             # Buy & Hold for all stocks
             all_bh_profit = sum(self.buy_hold_by_stock[s][0] for s in all_symbols)
             all_bh_initial = 100.0 * len(all_symbols)
-            all_bh_pct = (all_bh_profit / all_bh_initial * 100) if all_bh_initial else 0
+            all_bh_pct = (all_bh_profit / all_bh_initial * 100) if all_bh_initial != 0 else 0
 
             # Trend-following for all stocks
             all_trend_profit = sum(g[3] for s in all_symbols for g in self.results_by_stock.get(s, []))
             all_trend_trades = sum(g[4] for s in all_symbols for g in self.results_by_stock.get(s, []))
             all_trend_wins = sum(g[4] * g[5] for s in all_symbols for g in self.results_by_stock.get(s, []))
-            all_trend_winrate = (all_trend_wins / all_trend_trades * 100) if all_trend_trades else 0
+            all_trend_winrate = (all_trend_wins / all_trend_trades * 100) if all_trend_trades != 0 else 0
             
             html_content += f"""
             <hr>
