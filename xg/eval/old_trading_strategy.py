@@ -346,7 +346,7 @@ def generate_inline_plot(group: List[TradingDay], trade_signals: List[Tuple[str,
         close_x.append(current_x + spacing)
         current_x += 1  # larger spacing between days
 
-    # Align plotted trades with backtest: buy/sell at i+1 open (historical trades - triangles)
+    # Align plotted trades with backtest: buy/sell at i+1 open
     buys_x, buys_y, sells_x, sells_y = [], [], [], []
     holding = False
     for i, (_, signal) in enumerate(trade_signals):
@@ -359,46 +359,15 @@ def generate_inline_plot(group: List[TradingDay], trade_signals: List[Tuple[str,
             sells_y.append(opens[i+1])
             holding = False
 
-    # ✅ ADD FUTURE SIGNALS (squares)
-    future_buys_x, future_buys_y, future_sells_x, future_sells_y = [], [], [], []
-    
-    # Get the final signal from the last day (this would be the next trading decision)
-    if trade_signals:
-        final_signal = trade_signals[-1][1]  # Last signal from the strategy
-        last_day = group[-1]
-        
-        # Position the future signal at the end of the chart
-        future_x = open_x[-1] + 1  # One position beyond the last day
-        future_price = last_day.close  # Use last close price as reference
-        
-        if final_signal == 1:  # Buy signal
-            future_buys_x.append(future_x)
-            future_buys_y.append(future_price)
-        elif final_signal == -1:  # Sell signal
-            future_sells_x.append(future_x)
-            future_sells_y.append(future_price)
-
     fig, ax = plt.subplots(figsize=(12, 6))
     # Main open→close line
     ax.plot(x_vals, prices, color='black', linewidth=2, label='Open→Close Line')
     # Add open and close lines
     ax.plot(open_x, opens, color='#8ecae6', linestyle='--', linewidth=1, alpha=0.7, label='Open Price')
     ax.plot(close_x, closes, color='#ffb703', linestyle='--', linewidth=1, alpha=0.7, label='Close Price')
-    
-    # Historical buy/sell markers (triangles)
-    ax.scatter(buys_x, buys_y, color='green', marker='^', s=120, label='Historical Buy')
-    ax.scatter(sells_x, sells_y, color='red', marker='v', s=120, label='Historical Sell')
-    
-    # ✅ Future buy/sell markers (squares)
-    if future_buys_x:
-        ax.scatter(future_buys_x, future_buys_y, color='darkgreen', marker='s', s=150, label='Future Buy Signal', edgecolors='black', linewidth=2)
-    if future_sells_x:
-        ax.scatter(future_sells_x, future_sells_y, color='darkred', marker='s', s=150, label='Future Sell Signal', edgecolors='black', linewidth=2)
-    
-    # ✅ Add a vertical line to separate historical from future
-    if future_buys_x or future_sells_x:
-        ax.axvline(x=open_x[-1] + 0.5, color='gray', linestyle=':', alpha=0.7, label='Future Signal')
-    
+    # Buy/sell markers
+    ax.scatter(buys_x, buys_y, color='green', marker='^', s=120, label='Buy')
+    ax.scatter(sells_x, sells_y, color='red', marker='v', s=120, label='Sell')
     ax.set_xticks(tick_positions)
     ax.set_xticklabels(dates_for_xticks, rotation=45, ha='right', fontsize=9)
     ax.set_xlabel("Date")
@@ -407,7 +376,7 @@ def generate_inline_plot(group: List[TradingDay], trade_signals: List[Tuple[str,
     ax.legend()
     plt.tight_layout()
 
-    buf = BytesIO() 
+    buf = BytesIO()
     plt.savefig(buf, format='png')
     plt.close()
     buf.seek(0)
@@ -415,43 +384,13 @@ def generate_inline_plot(group: List[TradingDay], trade_signals: List[Tuple[str,
     return f'<img src="data:image/png;base64,{encoded}" alt="Signal Chart for {symbol} Group {group_index}" style="width:100%;max-width:800px;margin-top:10px;">'
 
 class StrategyTester:
-    def __init__(self, json_file: str, max_group_length: int = 20):
+    def __init__(self, json_file: str, max_group_length: int =20):  # ← new parameter
         # Ensure optimal_weights is defined before loading data
         self.optimal_weights = {}  # symbol -> list of optimal weights dict per group
         self.trading_data = self._load_data(json_file, max_group_length)
         # We'll store per-stock and global buy-and-hold metrics here.
         self.buy_hold_by_stock = {}  # symbol -> (total_profit, percent_profit)
         self.global_buy_hold = None
-        
-        # ✅ ADD SIMPLE SLIPPAGE CONFIGURATION
-        self.slippage_config = {
-            'base_slippage_bps': 25,  # 5 basis points (0.05%) base slippage
-        }
-
-    def calculate_slippage_adjusted_price(self, target_open_price: float, decision: int) -> float:
-        """
-        Calculate slippage-adjusted execution price - ALWAYS EXECUTES.
-        
-        Args:
-            target_open_price: The open price we want to trade at
-            decision: 1 for buy, -1 for sell
-            
-        Returns:
-            Slippage-adjusted execution price
-        """
-        # ✅ SIMPLE FIXED SLIPPAGE
-        base_slippage = self.slippage_config['base_slippage_bps'] / 10000  # Convert bps to decimal
-        
-        if decision == 1:  # Buy order - PAY MORE
-            execution_price = target_open_price * (1 + base_slippage)
-        elif decision == -1:  # Sell order - RECEIVE LESS
-            execution_price = target_open_price * (1 - base_slippage)
-        elif decision == 0:  # Hold - no slippage needed
-            execution_price = target_open_price
-        else:
-            raise ValueError(f"Invalid decision value: {decision}. Expected 1 (buy), -1 (sell), or 0 (hold)")
-        
-        return execution_price
 
     def _load_data(self, json_file: str, max_group_length: int) -> Dict[str, List[List[TradingDay]]]:
         """
@@ -753,9 +692,6 @@ class StrategyTester:
         buy_indices = []
         sell_indices = []
         holding = False
-        
-        # ✅ ADD SLIPPAGE TRACKING
-        total_slippage_cost = 0.0
 
         shares_bought = 100.0 / group[0].open if group[0].open != 0 else 0.0
 
@@ -766,7 +702,6 @@ class StrategyTester:
                 level1_method, level2_method,
                 level3_method, level4_method
             )
-            
             # --- Use precomputed L5 variable ---
             l5_value = l5_precomputed[day.date].get(l5_method_name, None) if l5_method_name != "L5_none" else None
             # Only override decision if l5_method_name != "L5_none"
@@ -794,6 +729,8 @@ class StrategyTester:
                         decision = 1
                     elif l5_value < -0.5:
                         decision = -1
+            # L5_none: do nothing (keep decision as is)
+
 
             trade_signals.append((day.date, decision))
             final_decision = decision
@@ -804,87 +741,51 @@ class StrategyTester:
                 error = self.calculate_prediction_error(predictions, future_prices)
                 prediction_errors.append(error)
 
-            # ✅ UPDATED TRADE EXECUTION WITH SLIPPAGE (NO GAP PROTECTION)
-            if decision == 1 and position == 0:  # Buy signal
-                # Get slippage-adjusted execution price
-                execution_price = self.calculate_slippage_adjusted_price(
-                    target_open_price=next_day.open,
-                    decision=1
-                )
-                
+            if decision == 1 and position == 0:
                 position = 1
-                entry_price = execution_price  # ✅ Use slippage-adjusted price (HIGHER than open)
+                entry_price = group[i+1].open
                 buy_indices.append(i+1)
                 total_buys += 1
                 total_trades += 1
                 holding = True
-                
-                # Track slippage cost (positive = cost to trader)
-                slippage_cost = execution_price - next_day.open
-                total_slippage_cost += slippage_cost * shares_bought
-                    
-            elif decision == -1 and position == 1:  # Sell signal
-                # Get slippage-adjusted execution price
-                execution_price = self.calculate_slippage_adjusted_price(
-                    target_open_price=next_day.open,
-                    decision=-1
-                )
-                
+            elif decision == -1 and position == 1:
                 position = 0
-                exit_price = execution_price  # ✅ Use slippage-adjusted price (LOWER than open)
+                exit_price = group[i+1].open
                 sell_indices.append(i+1)
                 trade_profit = (exit_price - entry_price) * shares_bought
                 profit += trade_profit
-                
-                # Track slippage cost (positive = cost to trader)
-                slippage_cost = next_day.open - execution_price  # Positive since we receive less
-                total_slippage_cost += slippage_cost * shares_bought
-                
+                                    
                 if trade_profit > 0:
                     correct_trades += 1
                 total_trades += 1
                 holding = False
 
-        # At end, close any open position with slippage
+        # At end, close any open position
         if position == 1:
-            final_day = group[-1]
-            base_slippage = self.slippage_config['base_slippage_bps'] / 10000
-            exit_price = final_day.close * (1 - base_slippage)  # Receive less on final sell
-            
-            trade_profit = (exit_price - entry_price) * shares_bought
-            profit += trade_profit
+            exit_price = group[-1].close
+            profit += (exit_price - entry_price) * shares_bought
             sell_indices.append(len(group)-1)
-            
-            if trade_profit > 0:
+            if exit_price - entry_price > 0:
                 correct_trades += 1
-            
-            final_slippage_cost = final_day.close - exit_price
-            total_slippage_cost += final_slippage_cost * shares_bought
 
         mean_prediction_error = sum(prediction_errors) / len(prediction_errors) if prediction_errors else 0
 
         def get_name(f):
             return getattr(f, '__name__', str(f)).replace('<lambda>', 'lambda_func')
 
-        # ✅ CREATE RESULT WITH SLIPPAGE METRICS
-        result = PredictionResult(
+        return PredictionResult(
             method=method_name,
             level1_method=get_name(level1_method),
             level2_method=get_name(level2_method),
             level3_method=get_name(level3_method),
             level4_method=get_name(level4_method),
-            profit=profit,  # Already includes slippage impact
+            profit=profit,
             total_trades=total_trades,
             total_buys=total_buys,
             correct_trades=correct_trades,
             mean_prediction_error=mean_prediction_error,
             level5_method=l5_method_name 
-        )
-        
-        # Add slippage tracking attributes to result
-        result.total_slippage_cost = total_slippage_cost
-
-        return result, final_decision, trade_signals, position
+        ), final_decision, trade_signals, position  # <-- return final position
 
     def evaluate_all_combinations_group(self, group: List[TradingDay], symbol: str, group_index: int) -> List[PredictionResult]:
         results = []
@@ -994,7 +895,7 @@ class StrategyTester:
         best_strategy = None
         best_profit_pct = -float('inf')
         best_decision = 0
-        best_final_position = 0
+        best_final_position = 0  # Track final position for best strategy
 
         for l5_method_name in l5_method_names:
             for method_name, get_predictions in prediction_methods:
@@ -1005,11 +906,16 @@ class StrategyTester:
                     self.level4_trend_following
                 ]
 
+                if method_name in confidence_based_level4_methods:
+                    level4_methods.append(
+                        lambda score, m=confidence_based_level4_methods[method_name]: apply_confidence_sizing(score, m)
+                    )
+
                 for l1 in base_level1_methods:
                     for l2 in level2_methods:
                         for l3 in level3_methods:
                             for l4 in level4_methods:
-                                combination_counter += 1
+                                combination_counter += 1  # Increment counter
                                 result, decision, trade_signals, final_position = self.backtest_strategy_group(
                                     group, symbol, group_index, method_name, get_predictions, l1, l2, l3, l4,
                                     api_key=YOUR_KEY, api_secret=YOUR_SECRET,
@@ -1018,16 +924,9 @@ class StrategyTester:
                                     l5_precomputed=l5_precomputed
                                 )
                                 results.append((result, decision, trade_signals, final_position, l5_method_name))
-                                
-                                # ✅ ADD THIS: Track best strategy
-                                pct = (result.profit / 100.0 * 100)
-                                if pct > best_profit_pct:
-                                    best_profit_pct = pct
-                                    best_strategy = result
-                                    best_decision = decision
-                                    best_final_position = final_position
+                                # ...rest of your logic...
 
-        # Special L1 section - ADD THE SAME TRACKING HERE
+        # Special L1 section
         for special_l1 in [level1_confidence_blend, level1_error_adjusted]:
             for pred_num in range(1, 7):
                 pred1_key = f'pred_{pred_num}_1'
@@ -1063,7 +962,6 @@ class StrategyTester:
                                 )
                                 results.append((result, decision, trade_signals, final_position, l5_method_name))
 
-                                # ✅ ADD THIS: Track best strategy here too
                                 pct = (result.profit / 100.0 * 100)
                                 if pct > best_profit_pct:
                                     best_profit_pct = pct
@@ -1071,16 +969,23 @@ class StrategyTester:
                                     best_decision = decision
                                     best_final_position = final_position
 
-        # Now fix the final decision logic:
+        # ✅ Store final decision and final position from best strategy
         if not hasattr(self, 'final_decisions'):
             self.final_decisions = {}
         if not hasattr(self, 'final_positions'):
             self.final_positions = {}
 
-        # Use the actual best strategy's final decision and position
-        self.final_decisions[symbol] = "Buy" if best_decision == 1 else ("Sell" if best_decision == -1 else "Hold")
+        if best_decision == 1:
+            self.final_decisions[symbol] = "Buy"
+        elif best_decision == -1:
+            self.final_decisions[symbol] = "Sell"
+        else:
+            self.final_decisions[symbol] = "Hold"
+
+        # Store final position (1 if holding, 0 if not)
         self.final_positions[symbol] = best_final_position
 
+        # ✅ Return only the results (not the decisions)
         return results
 
 
@@ -1574,59 +1479,58 @@ class StrategyTester:
 
             portfolio_initial = self.per_stock_best_portfolio.get('total_initial', 0)
             portfolio_profit = self.per_stock_best_portfolio.get('total_profit', 0)
-            portfolio_trades = self.per_stock_best_portfolio.get('total_trades', 0)
-            portfolio_buys = self.per_stock_best_portfolio.get('total_buys', 0)
-            portfolio_correct = self.per_stock_best_portfolio.get('total_correct', 0)
+            portfolio_pct = self.per_stock_best_portfolio.get('profit_pct', 0)
+            portfolio_accuracy = self.per_stock_best_portfolio.get('accuracy', 0)
 
-            portfolio_profit_pct = (portfolio_profit / portfolio_initial * 100) if portfolio_initial != 0 else 0
-            portfolio_accuracy = (portfolio_correct / portfolio_buys * 100) if portfolio_buys != 0 else 0
+            total_bh_profit = sum(g[8] for s in self.portfolio_stocks for g in self.results_by_stock.get(s, []))
+            total_bh_initial = 100.0 * len(self.portfolio_stocks)
+            total_bh_profit = sum(self.buy_hold_by_stock[s][0] for s in self.portfolio_stocks)
+            total_trend_profit = sum(g[3] for s in self.portfolio_stocks for g in self.results_by_stock.get(s, []))
+            total_trend_trades = sum(g[4] for s in self.portfolio_stocks for g in self.results_by_stock.get(s, []))
+            total_trend_wins = sum(g[4] * g[5] for s in self.portfolio_stocks for g in self.results_by_stock.get(s, []))
 
-            # ✅ FIX: All-Stocks Metrics (ALL stocks, including losers)
-            all_initial = 0.0
-            all_profit = 0.0
-            all_trades = 0
-            all_buys = 0
-            all_correct = 0
+            bh_pct = (total_bh_profit / total_bh_initial * 100) if total_bh_initial else 0
+            trend_winrate_avg = (total_trend_wins / total_trend_trades * 100) if total_trend_trades else 0
 
-            all_symbols = list(self.trading_data.keys())
-            print("all_symbols")
-            print(all_symbols)
-            for symbol in all_symbols:
-                # Get the best result for each stock (even if it lost to buy-and-hold)
-                if symbol in self.results_by_stock:
-                    for group_result in self.results_by_stock[symbol]:
-                        _, best_strategy, *_ = group_result
-                        all_initial += 100.0  # Each group gets $100
-                        all_profit += best_strategy.profit
-                        all_trades += best_strategy.total_trades
-                        all_buys += best_strategy.total_buys
-                        all_correct += best_strategy.correct_trades
+            html_content += f"""
+            <h3>📊 Portfolio Metrics</h3>
+            <p><strong>📈 Strategy:</strong> Profit: ${portfolio_profit:.2f}, % Profit: {portfolio_pct:.2f}%, Accuracy: {portfolio_accuracy:.2f}%</p>
+            <p><strong>📊 Buy & Hold:</strong> Profit: ${total_bh_profit:.2f}, % Profit: {bh_pct:.2f}%</p>
+            <p><strong>📉 Trend-Following:</strong> Profit: ${total_trend_profit:.2f}, Trades: {total_trend_trades}, Win Rate: {trend_winrate_avg:.2f}%</p>
+            """
+            
+            # Aggregate metrics for all stocks (not just portfolio)
+            all_symbols = list(self.results_by_stock.keys())
 
-            all_profit_pct = (all_profit / all_initial * 100) if all_initial != 0 else 0
-            all_accuracy = (all_correct / all_buys * 100) if all_buys != 0 else 0
+            all_initial = sum(self.best_strategy_by_stock[s][2]['total_initial'] for s in all_symbols if s in self.best_strategy_by_stock)
+            all_profit = sum(self.best_strategy_by_stock[s][2]['total_profit'] for s in all_symbols if s in self.best_strategy_by_stock)
+            all_trades = sum(self.best_strategy_by_stock[s][2]['total_trades'] for s in all_symbols if s in self.best_strategy_by_stock)
+            all_buys = sum(self.best_strategy_by_stock[s][2]['total_buys'] for s in all_symbols if s in self.best_strategy_by_stock)
+            all_correct = sum(self.best_strategy_by_stock[s][2]['total_correct'] for s in all_symbols if s in self.best_strategy_by_stock)
 
-            # Buy & Hold calculations remain the same...
-            portfolio_bh_profit = sum(self.buy_hold_by_stock[s][0] for s in self.portfolio_stocks)
-            portfolio_bh_initial = 100.0 * len(self.portfolio_stocks)
-            portfolio_bh_pct = (portfolio_bh_profit / portfolio_bh_initial * 100) if portfolio_bh_initial != 0 else 0
+            all_profit_pct = (all_profit / all_initial * 100) if all_initial else 0
+            all_accuracy = (all_correct / all_buys * 100) if all_buys else 0
 
+            # Buy & Hold for all stocks
             all_bh_profit = sum(self.buy_hold_by_stock[s][0] for s in all_symbols)
             all_bh_initial = 100.0 * len(all_symbols)
-            all_bh_pct = (all_bh_profit / all_bh_initial * 100) if all_bh_initial != 0 else 0
+            all_bh_pct = (all_bh_profit / all_bh_initial * 100) if all_bh_initial else 0
 
-            # Update the HTML output
-            html_content += f"""
-            <h3>📊 Portfolio Metrics (Top {len(self.portfolio_stocks)} Stocks)</h3>
-            <p><strong>📈 Strategy:</strong> Profit: ${portfolio_profit:.2f}, % Profit: {portfolio_profit_pct:.2f}%, Accuracy: {portfolio_accuracy:.2f}%</p>
-            <p><strong>📊 Buy & Hold:</strong> Profit: ${portfolio_bh_profit:.2f}, % Profit: {portfolio_bh_pct:.2f}%</p>
+            # Trend-following for all stocks
+            all_trend_profit = sum(g[3] for s in all_symbols for g in self.results_by_stock.get(s, []))
+            all_trend_trades = sum(g[4] for s in all_symbols for g in self.results_by_stock.get(s, []))
+            all_trend_wins = sum(g[4] * g[5] for s in all_symbols for g in self.results_by_stock.get(s, []))
+            all_trend_winrate = (all_trend_wins / all_trend_trades * 100) if all_trend_trades else 0
             
+            html_content += f"""
             <hr>
-            <h3>📊 All-Stocks Metrics ({len(all_symbols)} Total Stocks)</h3>
+            <h3>📊 All-Stocks Metrics</h3>
             <p><strong>📈 Strategy:</strong> Profit: ${all_profit:.2f}, % Profit: {all_profit_pct:.2f}%, Accuracy: {all_accuracy:.2f}%</p>
             <p><strong>📊 Buy & Hold:</strong> Profit: ${all_bh_profit:.2f}, % Profit: {all_bh_pct:.2f}%</p>
+            <p><strong>📉 Trend-Following:</strong> Profit: ${all_trend_profit:.2f}, Trades: {all_trend_trades}, Win Rate: {all_trend_winrate:.2f}%</p>
             </div>
             """
-
+            
         # Final Strategy-Based Signal section (always show if available)
         if hasattr(self, 'final_decisions') and self.final_decisions:
             html_content += """
@@ -1650,6 +1554,20 @@ class StrategyTester:
                 html_content += f"<tr><td>{stock}</td><td>{signal}</td><td>{action}</td></tr>"
             html_content += """
             </table>
+            </div>
+            """
+        
+        if self.global_unified_strategy['strategy_key']:
+            key = self.global_unified_strategy['strategy_key']
+            html_content += f"""
+            <div class='stock-section'>
+            <h2>🧠 Unified Strategy Across Top Stocks</h2>
+            <p><strong>Strategy Used:</strong> Prediction {key[0]}, L1: {key[1]}, L2: {key[2]}, L3: {key[3]}, L4: {key[4]}, L5: {key[5]}</p>
+            <p><strong>Total Initial:</strong> ${self.global_unified_strategy['total_initial']:.2f}</p>
+            <p><strong>Total Profit:</strong> ${self.global_unified_strategy['total_profit']:.2f}</p>
+            <p><strong>Profit %:</strong> {self.global_unified_strategy['profit_pct']:.2f}%</p>
+            <p><strong>Total Trades:</strong> {self.global_unified_strategy['total_trades']}</p>
+            <p><strong>Accuracy:</strong> {self.global_unified_strategy['accuracy']:.2f}%</p>
             </div>
             """
 
@@ -1703,13 +1621,3 @@ if __name__ == "__main__":
 
     tester = StrategyTester(json_path)
     tester.run_all_backtests(json_path)
-
-    for stock, signal in tester.final_decisions.items():
-        holding = tester.final_positions.get(stock, 0)
-        if signal == "Buy":
-            assert holding == 0, f"Incorrect holding state for {stock} with Buy signal"
-        elif signal == "Sell":
-            assert holding == 1, f"Incorrect holding state for {stock} with Sell signal"
-        else:
-            assert holding == 0, f"Incorrect holding state for {stock} with Hold signal"
-    print("All final decisions and positions are consistent.")

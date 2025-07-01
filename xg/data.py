@@ -558,7 +558,7 @@ start_date = future_date - timedelta(days=3000)
 full_dates = dates()
 
 realtime = True
-mannuel = True
+mannuel = False
 
 if mannuel:
     last_known_dates = {
